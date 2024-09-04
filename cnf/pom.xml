@@ -267,6 +267,12 @@
 			<artifactId>fastexcel-reader</artifactId>
 			<version>0.18.1</version>
 		</dependency>
+		<!-- MQTT client for MQTTv3 bridge ECP added module-->
+		<dependency>
+			<groupId>org.eclipse.paho</groupId>
+			<artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+			<version>1.2.5</version>
+		</dependency>
 		<dependency>
 			<!-- Eclipse Paho MQTTv5 Client -->
 			<groupId>org.eclipse.paho</groupId>
