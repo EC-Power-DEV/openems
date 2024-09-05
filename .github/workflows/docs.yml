@@ -1,8 +1,8 @@
 name: Build Docs
 on:
   push:
-    branches:
-      - develop
+  #   branches:
+  #     - develop
 
 jobs:
   build-docs:
@@ -17,16 +17,16 @@ jobs:
           java-version: '21'
           cache: gradle
 
-      - name: Build Javadocs
-        run: ./gradlew buildAggregatedJavadocs --continue
+       - name: Build Javadocs
+         run: ./gradlew buildAggregatedJavadocs --continue
 
-      - name: Build Antora-docs for openems.io
-        run: ./gradlew buildAntoraDocs --continue
+       - name: Build Antora-docs for openems.io
+         run: ./gradlew buildAntoraDocs --continue
 
-      - name: Deploy to GitHub pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          personal_token: ${{ secrets.DOCS }}
-          external_repository: OpenEMS/openems.io
-          publish_branch: master
-          publish_dir: build/www
+       - name: Deploy to GitHub pages
+         uses: peaceiris/actions-gh-pages@v4
+         with:
+           personal_token: ${{ secrets.DOCS }}
+           external_repository: OpenEMS/openems.io
+           publish_branch: master
+           publish_dir: build/www
