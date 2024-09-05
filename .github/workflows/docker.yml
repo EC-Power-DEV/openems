@@ -2,11 +2,11 @@ name: Build OpenEMS Docker Image
 
 on:
   push:
-    branches:
-      - develop
-      - main
-    tags:
-      - "*.*.*"
+    #branches:
+    #  - develop
+    #  - main
+    #tags:
+    #  - "*.*.*"
     
 jobs:
   docker:

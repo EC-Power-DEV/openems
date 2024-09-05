@@ -2,8 +2,8 @@ name: Prepare OpenEMS Release
 
 on:
   push:
-    tags:
-      - "*.*.*"
+    #tags:
+    #  - "*.*.*"
   
 jobs:
   build-java:
