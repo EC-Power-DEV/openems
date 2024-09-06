@@ -62,23 +62,32 @@ subprojects {
 
 		}
 
+		/**
+		* Export setup to maven repository on github.
+		*
+		*	This approach only works with https access and uses tokens for access. 
+		* 	As of september 2024, it is not functional - hence disabled
+		* 
+		 */
+		 /*
 		repositories {
 			maven {
 				name = "GitHubPackages"
-				url = "https://maven.pkg.github.com/jbmPolymico/openems"
+				url = "https://maven.pkg.github.com/EC-Power-DEV/openems"
+				//url = uri("scm:git:ssh://git@github.com:EC-Power-DEV/openems.git")
 				credentials {
 				username = findProperty("gprUsername") ?: "yourusername" // GitHub username stored in <username>/.m2/settings.xml https://www.baeldung.com/maven-settings-xml
 				password = findProperty("gprToken")  // GitHub token - also stored in settings.xml https://www.baeldung.com/maven-settings-xml
 				}
 			}
 		}
+		*/
 
-		/*
 		// Configure the publication to the local Maven repository
     	repositories {
         	mavenLocal() // Publish to ~/.m2/repository
     	}
-		*/
+		
 	}
 
 	tasks.withType(JavaCompile) {
