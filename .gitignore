@@ -199,6 +199,7 @@ typings/
 ### Gradle ###
 .gradle
 /build/
+cnf/build/ 
 
 # Ignore Gradle GUI config
 gradle-app.setting
