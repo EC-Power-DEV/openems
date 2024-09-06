@@ -19,7 +19,8 @@ dependencies {
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(project.java_source as Integer)
+		//languageVersion = JavaLanguageVersion.of(project.java_source as Integer) // @JBM No clue why this has to be hardcoded to make the repository export work
+		languageVersion.set(JavaLanguageVersion.of(17))
 	}
 }
 
@@ -30,10 +31,65 @@ java {
  * - setup parrallel execution
  */
 subprojects {
+
+	/*
+	* Adding plugins needed to the publishing to packages on github.
+	*
+	*/
+	apply plugin: "maven-publish"
+    apply plugin: "java"
+
+
 	repositories {
 		mavenCentral()
 	}
 	
+	/*
+	* Added this section for publishing.
+	*/
+	publishing {
+		publications {
+			openems(MavenPublication){
+				from components.java
+
+
+				groupId = 'io.openems'
+				artifactId = project.name.toLowerCase()
+				//artifactId = project.name.replace("${project.group}.", "")
+				version = '1.0.0'
+
+				}
+
+		}
+
+		/**
+		* Export setup to maven repository on github.
+		*
+		*	This approach only works with https access and uses tokens for access. 
+		* 	As of september 2024, it is not functional - hence disabled
+		* 
+		 */
+		 /*
+		repositories {
+			maven {
+				name = "GitHubPackages"
+				url = "https://maven.pkg.github.com/EC-Power-DEV/openems"
+				//url = uri("scm:git:ssh://git@github.com:EC-Power-DEV/openems.git")
+				credentials {
+				username = findProperty("gprUsername") ?: "yourusername" // GitHub username stored in <username>/.m2/settings.xml https://www.baeldung.com/maven-settings-xml
+				password = findProperty("gprToken")  // GitHub token - also stored in settings.xml https://www.baeldung.com/maven-settings-xml
+				}
+			}
+		}
+		*/
+
+		// Configure the publication to the local Maven repository
+    	repositories {
+        	mavenLocal() // Publish to ~/.m2/repository
+    	}
+		
+	}
+
 	tasks.withType(JavaCompile) {
 		options.release.set(project.java_target as Integer)
 		options.encoding = 'UTF-8'
