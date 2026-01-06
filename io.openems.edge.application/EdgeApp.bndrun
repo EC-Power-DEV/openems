@@ -131,7 +131,6 @@
 	bnd.identity;id='io.openems.edge.evcs.ocpp.common',\
 	bnd.identity;id='io.openems.edge.evcs.ocpp.ies.keywatt.singleccs',\
 	bnd.identity;id='io.openems.edge.evcs.ocpp.server',\
-	bnd.identity;id='io.openems.edge.evcs.openwb',\
 	bnd.identity;id='io.openems.edge.evcs.spelsberg',\
 	bnd.identity;id='io.openems.edge.evcs.webasto.next',\
 	bnd.identity;id='io.openems.edge.evcs.webasto.unite',\
@@ -331,7 +330,6 @@
 	io.openems.edge.evcs.ocpp.common;version=snapshot,\
 	io.openems.edge.evcs.ocpp.ies.keywatt.singleccs;version=snapshot,\
 	io.openems.edge.evcs.ocpp.server;version=snapshot,\
-	io.openems.edge.evcs.openwb;version=snapshot,\
 	io.openems.edge.evcs.spelsberg;version=snapshot,\
 	io.openems.edge.evcs.webasto.next;version=snapshot,\
 	io.openems.edge.evcs.webasto.unite;version=snapshot,\
@@ -489,4 +487,5 @@
 	org.owasp.encoder;version='[1.4.0,1.4.1)',\
 	reactive-streams;version='[1.0.4,1.0.5)',\
 	rrd4j;version='[3.9.0,3.9.1)',\
-	stax2-api;version='[4.2.2,4.2.3)'
+	stax2-api;version='[4.2.2,4.2.3)',\
+	io.openems.wrapper.paho-mqttv3;version=snapshot
