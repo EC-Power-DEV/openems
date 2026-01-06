@@ -3,90 +3,95 @@ package io.openems.edge.bridge.mqtt;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.AttributeType;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
+import org.osgi.service.metatype.annotations.Option;
 
-import io.openems.edge.bridge.mqtt.api.MqttVersion;
-import io.openems.edge.bridge.mqtt.api.QoS;
 
-@ObjectClassDefinition(//
-		name = "Bridge MQTT", //
-		description = "Provides an MQTT connection to a broker.")
-public @interface Config {
+@ObjectClassDefinition(
+        name = "Bridge Mqtt",
+        description = "Mqtt Bridge to communicate with a specific broker.")
+@interface Config {
 
-	@AttributeDefinition(name = "Component-ID", description = "Unique ID of this Component")
-	String id() default "mqtt0";
+    String service_pid();
 
-	@AttributeDefinition(name = "Alias", description = "Human-readable name of this Component; defaults to Component-ID")
-	String alias() default "";
+    @AttributeDefinition(name = "MqttBridge - ID", description = "Id of Mqtt Bridge.")
+    String id() default "MqttBridge";
 
-	@AttributeDefinition(name = "Is enabled?", description = "Is this Component enabled?")
-	boolean enabled() default true;
+    @AttributeDefinition(name = "Alias", description = "Human readable name for this Component.")
+    String alias() default "";
 
-	@AttributeDefinition(name = "MQTT Version", description = "The MQTT protocol version to use")
-	MqttVersion mqttVersion() default MqttVersion.V3_1_1;
+    boolean useCoreCycleTime();
 
-	@AttributeDefinition(name = "Broker Host", description = "Hostname/IP of the MQTT broker (e.g., localhost, 127.0.0.1, broker.example.com)")
-	String host() default "localhost";
+    @AttributeDefinition(name = "Broker URL", description = "URL of the Broker (if any given)..if you set a URL, you do NOT need to enter IP+ Port+ basepath + connection")
+    String brokerUrl() default "";
 
-	@AttributeDefinition(name = "Broker Port", description = "Port of the MQTT broker (e.g., 1883 or 8883)")
-	int port() default 1883;
+    @AttributeDefinition(name = "Broker IP", description = "IP of the broker")
+    String ipBroker() default "localhost";
 
-	@AttributeDefinition(name = "Use SSL/TLS", description = "Whether to use SSL/TLS for the connection")
-	boolean secureConnect() default false;
+    @AttributeDefinition(name = "Port", description = "The Port the broker opened for communication(1883 or 8883 are common)")
+    int portBroker() default 1883;
 
-	@AttributeDefinition(name = "Client ID", description = "Unique client identifier. Leave empty for auto-generated ID.")
-	String clientId() default "";
+    @AttributeDefinition(name = "Basepath", description = "The Basepath of the MQTT Connection.")
+    String basepath() default "/ws";
 
-	@AttributeDefinition(name = "Username", description = "Username for broker authentication (optional)")
-	String username() default "";
+    @AttributeDefinition(name = "Connection Type", description = "Tcp or TLS",
+            options = {
+                    @Option(label = "Tcp", value = "Tcp"),
+                    @Option(label = "TLS", value = "ssl"),
+                    @Option(label = "Websocket", value = "Wss")
+            })
+    String connection() default "Tcp";
+    
+    @AttributeDefinition(name = "Certificate", description = "The client certificate in PEM format")
+	String certPem();
 
-	@AttributeDefinition(name = "Password", description = "Password for broker authentication (optional)", type = AttributeType.PASSWORD)
-	String password() default "";
+	@AttributeDefinition(name = "Private Key", description = "The private key in PEM format")
+	String privateKeyPem();
 
-	@AttributeDefinition(name = "Clean Session", description = "Start with a clean session (no persistent subscriptions)")
-	boolean cleanSession() default true;
+	@AttributeDefinition(name = "Trust Store", description = "The trust store in PEM format")
+	String trustStorePem();
 
-	@AttributeDefinition(name = "Keep Alive Interval [s]", description = "Keep-alive interval in seconds (0 = disabled)")
-	int keepAliveInterval() default 60;
+    @AttributeDefinition(name = "Username", description = "Username for the Broker")
+    String username() default "user";
 
-	@AttributeDefinition(name = "Connection Timeout [s]", description = "Connection timeout in seconds")
-	int connectionTimeout() default 30;
+    @AttributeDefinition(name = "Password", description = "Password", type = AttributeType.PASSWORD)
+    String password() default "user";
 
-	@AttributeDefinition(name = "Auto Reconnect", description = "Automatically reconnect on connection loss")
-	boolean autoReconnect() default true;
 
-	@AttributeDefinition(name = "Reconnect Delay [ms]", description = "Initial delay before reconnecting in milliseconds")
-	int reconnectDelayMs() default 1000;
+    @AttributeDefinition(name = "ClientName", description = "ClientId used for brokerConnection")
+    String clientId() default "OpenEMS-1";
 
-	@AttributeDefinition(name = "Max Reconnect Delay [ms]", description = "Maximum delay between reconnect attempts in milliseconds")
-	int maxReconnectDelayMs() default 30000;
+    @AttributeDefinition(name = "Keep Alive", description = "Keep Alive in Seconds")
+    int keepAlive() default 60;
 
-	@AttributeDefinition(name = "LWT Topic", description = "Topic for Last Will and Testament message (optional)")
-	String lwtTopic() default "";
+    @AttributeDefinition(name = "LastWillSet", description = "Do you want a Last Will / Testament to be enabled")
+    boolean lastWillSet() default true;
 
-	@AttributeDefinition(name = "LWT Message", description = "Message to send when connection is lost unexpectedly")
-	String lwtMessage() default "";
+    @AttributeDefinition(name = "Topic Last Will", description = "Topic for Last Will")
+    String topicLastWill() default "OpenEMS/Leaflet_0/Status/";
 
-	@AttributeDefinition(name = "LWT QoS", description = "QoS level for Last Will message")
-	QoS lwtQos() default QoS.AT_LEAST_ONCE;
 
-	@AttributeDefinition(name = "LWT Retained", description = "Whether the Last Will message should be retained")
-	boolean lwtRetained() default false;
+    @AttributeDefinition(name = "LastWill Payload", description = "Payload for the last Will")
+    String payloadLastWill() default "Status : Connected";
 
-	@AttributeDefinition(name = "Trust Store Path", description = "Path to the trust store file for SSL/TLS (optional)")
-	String trustStorePath() default "";
+    @AttributeDefinition(name = "QoS of Last Will", description = "Quality of Service of last Will Msg")
+    int qosLastWill() default 0;
 
-	@AttributeDefinition(name = "Trust Store Password", description = "Password for the trust store", type = AttributeType.PASSWORD)
-	String trustStorePassword() default "";
+    @AttributeDefinition(name = "Clean Session Flag", description = "If set to false --> Persistent Session")
+    boolean cleanSessionFlag() default true;
 
-	@AttributeDefinition(name = "Key Store Path", description = "Path to the key store file for client certificates (optional)")
-	String keyStorePath() default "";
+    @AttributeDefinition(name = "Retaines Message for Last Will?", description = "Retained Flag of Mqtt Last Will Message.")
+    boolean retainedFlag() default true;
 
-	@AttributeDefinition(name = "Key Store Password", description = "Password for the key store", type = AttributeType.PASSWORD)
-	String keyStorePassword() default "";
+    @AttributeDefinition(name = "Use Time for Last Will", description = "Send a timestamp?")
+    boolean timeStampEnabled() default true;
 
-	@AttributeDefinition(name = "Debug Mode", description = "Enable debug logging for MQTT communication")
-	boolean debugMode() default false;
+    @AttributeDefinition(name = "Mqtt Types", description = "Possible MqttTypes, will be filled after activation")
+    String[] mqttTypes() default {""};
 
-	String webconsole_configurationFactory_nameHint() default "Bridge MQTT [{id}]";
+    @AttributeDefinition(name = "Mqtt Priorities", description = "MqttPriorities, will be filled automatically after activation")
+    String[] mqttPriorities() default {""};
 
+    boolean enabled() default true;
+
+    String webconsole_configurationFactory_nameHint() default "Mqtt Bridge [{id}]";
 }
