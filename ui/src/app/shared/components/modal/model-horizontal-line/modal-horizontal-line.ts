@@ -4,13 +4,14 @@ import { Component, Input } from "@angular/core";
  * Shows a Horizontal Line for every but the last component or a simple Line.
  */
 @Component({
-    selector: 'oe-modal-horizontal-line',
-    templateUrl: './modal-horizontal-line.html',
+    selector: "oe-modal-horizontal-line",
+    templateUrl: "./modal-horizontal-line.html",
+    standalone: false,
 })
 export class ModalHorizontalLineComponent {
 
     /** Components-Array to iterate over */
-    @Input({ required: true }) protected components!: any[];
+    @Input({ required: true }) public components!: any[];
     /** index is an iterator */
-    @Input({ required: true }) protected index!: number;
+    @Input({ required: true }) public index!: number;
 }

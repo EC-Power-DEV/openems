@@ -2,24 +2,35 @@ package io.openems.edge.app.integratedsystem;
 
 import java.util.ResourceBundle;
 
+import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
+import io.openems.common.exceptions.OpenemsException;
 import io.openems.common.types.EdgeConfig;
 import io.openems.common.types.EdgeConfig.Component;
 import io.openems.common.utils.JsonUtils;
-import io.openems.edge.app.enums.FeedInType;
+import io.openems.edge.app.enums.ExternalLimitationType;
 import io.openems.edge.app.enums.Parity;
 import io.openems.edge.app.enums.SafetyCountry;
+import io.openems.edge.app.ess.Limiter14a;
 import io.openems.edge.app.ess.PrepareBatteryExtension;
+import io.openems.edge.app.hardware.IoGpio;
 import io.openems.edge.app.pvselfconsumption.GridOptimizedCharge;
 import io.openems.edge.app.pvselfconsumption.SelfConsumptionOptimization;
+import io.openems.edge.core.appmanager.AppManagerUtil;
 import io.openems.edge.core.appmanager.ConfigurationTarget;
+import io.openems.edge.core.appmanager.OpenemsAppCategory;
+import io.openems.edge.core.appmanager.OpenemsAppInstance;
 import io.openems.edge.core.appmanager.TranslationUtil;
 import io.openems.edge.core.appmanager.dependency.DependencyDeclaration;
+import io.openems.edge.core.appmanager.dependency.Task;
+import io.openems.edge.core.appmanager.dependency.Tasks;
+import io.openems.edge.core.appmanager.dependency.aggregatetask.PredictorManagerByCentralOrderConfiguration;
+import io.openems.edge.core.appmanager.dependency.aggregatetask.SchedulerByCentralOrderConfiguration;
 
 public final class FeneconHomeComponents {
 
 	/**
 	 * Creates a default battery component for a FENECON Home.
-	 * 
+	 *
 	 * @param bundle           the translation bundle
 	 * @param batteryId        the id of the battery
 	 * @param modbusIdInternal the id of the internal modbus bridge
@@ -30,41 +41,110 @@ public final class FeneconHomeComponents {
 			final String batteryId, //
 			final String modbusIdInternal //
 	) {
+		return battery(bundle, batteryId, modbusIdInternal, "AUTO");
+	}
+
+	/**
+	 * Creates a default battery component for a FENECON Home.
+	 *
+	 * @param bundle           the translation bundle
+	 * @param batteryId        the id of the battery
+	 * @param modbusIdInternal the id of the internal modbus bridge
+	 * @param batteryStartStop the startStop target of the bridge
+	 * @return the {@link Component}
+	 */
+	public static EdgeConfig.Component battery(//
+			final ResourceBundle bundle, //
+			final String batteryId, //
+			final String modbusIdInternal, //
+			final String batteryStartStop //
+	) {
+		return battery(bundle, batteryId, modbusIdInternal, batteryStartStop, "io0/Relay4");
+	}
+
+	/**
+	 * Creates a default battery component for a FENECON Home or Commercial.
+	 *
+	 * @param bundle              the translation bundle
+	 * @param batteryId           the id of the battery
+	 * @param modbusIdInternal    the id of the internal modbus bridge
+	 * @param batteryStartStop    the startStop target of the bridge
+	 * @param batteryStartUpRelay the start up relay of the battery
+	 * @return the {@link Component}
+	 */
+	public static EdgeConfig.Component battery(//
+			final ResourceBundle bundle, //
+			final String batteryId, //
+			final String modbusIdInternal, //
+			final String batteryStartStop, //
+			final String batteryStartUpRelay //
+	) {
 		return new EdgeConfig.Component(batteryId,
 				TranslationUtil.getTranslation(bundle, "App.IntegratedSystem.battery0.alias"), "Battery.Fenecon.Home", //
 				JsonUtils.buildJsonObject() //
 						.addProperty("enabled", true) //
-						.addProperty("batteryStartUpRelay", "io0/Relay4") //
+						.addProperty("batteryStartUpRelay", batteryStartUpRelay) //
 						.addProperty("modbus.id", modbusIdInternal) //
 						.addProperty("modbusUnitId", 1) //
-						.addProperty("startStop", "AUTO") //
+						.addProperty("startStop", batteryStartStop) //
 						.build());
 	}
 
 	/**
 	 * Creates a default battery inverter component for a FENECON Home.
-	 * 
+	 *
 	 * @param bundle                   the translation bundle
 	 * @param batteryInverterId        the id of the battery inverter
 	 * @param hasEmergencyReserve      if the system has emergency reserve enabled
-	 * @param feedInType               the {@link FeedInType}
-	 * @param maxFeedInPower           the max feed in power
+	 * @param feedInType               the {@link ExternalLimitationType}
 	 * @param modbusIdExternal         the id of the external modbus bridge
 	 * @param shadowManagementDisabled if shadowmanagement is disabled
 	 * @param safetyCountry            the {@link SafetyCountry}
 	 * @param feedInSetting            the feedInSetting
+	 * @param naProtectionEnabled      if NA-protection is enabled
 	 * @return the {@link Component}
 	 */
 	public static EdgeConfig.Component batteryInverter(//
 			final ResourceBundle bundle, //
 			final String batteryInverterId, //
 			final boolean hasEmergencyReserve, //
-			final FeedInType feedInType, //
-			final int maxFeedInPower, //
+			final ExternalLimitationType feedInType, //
 			final String modbusIdExternal, //
 			final boolean shadowManagementDisabled, //
 			final SafetyCountry safetyCountry, //
-			final String feedInSetting //
+			final String feedInSetting, //
+			final boolean naProtectionEnabled //
+	) {
+		return batteryInverter(bundle, batteryInverterId, hasEmergencyReserve, feedInType, modbusIdExternal,
+				shadowManagementDisabled, safetyCountry, feedInSetting, naProtectionEnabled, null);
+	}
+
+	/**
+	 * Creates a default battery inverter component for a FENECON Home.
+	 *
+	 * @param bundle                   the translation bundle
+	 * @param batteryInverterId        the id of the battery inverter
+	 * @param hasEmergencyReserve      if the system has emergency reserve enabled
+	 * @param feedInType               the {@link ExternalLimitationType}
+	 * @param modbusIdExternal         the id of the external modbus bridge
+	 * @param shadowManagementDisabled if shadowmanagement is disabled
+	 * @param safetyCountry            the {@link SafetyCountry}
+	 * @param feedInSetting            the feedInSetting
+	 * @param naProtectionEnabled      if NA-protection is enabled
+	 * @param gridCode                 the grid code
+	 * @return the {@link Component}
+	 */
+	public static EdgeConfig.Component batteryInverter(//
+			final ResourceBundle bundle, //
+			final String batteryInverterId, //
+			final boolean hasEmergencyReserve, //
+			final ExternalLimitationType feedInType, //
+			final String modbusIdExternal, //
+			final boolean shadowManagementDisabled, //
+			final SafetyCountry safetyCountry, //
+			final String feedInSetting, //
+			final boolean naProtectionEnabled, //
+			final String gridCode //
 	) {
 		return new EdgeConfig.Component(batteryInverterId,
 				TranslationUtil.getTranslation(bundle, "App.IntegratedSystem.batteryInverter0.alias"),
@@ -73,21 +153,26 @@ public final class FeneconHomeComponents {
 						.addProperty("backupEnable", //
 								hasEmergencyReserve ? "ENABLE" : "DISABLE") //
 						.addProperty("controlMode", "SMART") //
-						.addProperty("feedPowerEnable",
-								feedInType == FeedInType.DYNAMIC_LIMITATION ? "ENABLE" : "DISABLE") //
-						.addProperty("feedPowerPara", maxFeedInPower) //
+						// Value got migrated to Meta#maximumGridFeedInLimit
+						.addProperty("feedPowerPara", -1) //
 						.addProperty("modbus.id", modbusIdExternal) //
 						.addProperty("modbusUnitId", 247) //
 						.addProperty("mpptForShadowEnable", shadowManagementDisabled ? "DISABLE" : "ENABLE") //
 						.addProperty("safetyCountry", safetyCountry) //
 						.addProperty("setfeedInPowerSettings", feedInSetting) //
-						.addProperty("rcrEnable", feedInType == FeedInType.EXTERNAL_LIMITATION ? "ENABLE" : "DISABLE") //
+						.addProperty("rcrEnable",
+								feedInType == ExternalLimitationType.EXTERNAL_LIMITATION
+										|| feedInType == ExternalLimitationType.DYNAMIC_AND_EXTERNAL_LIMITATION
+												? "ENABLE"
+												: "DISABLE") //
+						.addProperty("naProtectionEnable", naProtectionEnabled ? "ENABLE" : "DISABLE") //
+						.addPropertyIfNotNull("gridCode", gridCode) //
 						.build());
 	}
 
 	/**
 	 * Creates a default ess component for a FENECON Home.
-	 * 
+	 *
 	 * @param bundle            the translation bundle
 	 * @param essId             the id of the ess
 	 * @param batteryId         the id of the battery
@@ -112,7 +197,7 @@ public final class FeneconHomeComponents {
 
 	/**
 	 * Creates a default io component for a FENECON Home.
-	 * 
+	 *
 	 * @param bundle           the translation bundle
 	 * @param modbusIdInternal the id of the internal modbus bridge
 	 * @return the {@link Component}
@@ -132,7 +217,7 @@ public final class FeneconHomeComponents {
 
 	/**
 	 * Creates a default grid meter component for a FENECON Home.
-	 * 
+	 *
 	 * @param bundle            the translation bundle
 	 * @param gridMeterId       the id of the grid meter
 	 * @param modbusIdExternal  the id of the external modbus bridge
@@ -163,7 +248,7 @@ public final class FeneconHomeComponents {
 
 	/**
 	 * Creates a default internal modbus component for a FENECON Home.
-	 * 
+	 *
 	 * @param bundle           the translation bundle
 	 * @param t                the current {@link ConfigurationTarget}
 	 * @param modbusIdInternal the id of the internal modbus bridge
@@ -175,7 +260,8 @@ public final class FeneconHomeComponents {
 			final String modbusIdInternal //
 	) {
 		return new EdgeConfig.Component(modbusIdInternal,
-				TranslationUtil.getTranslation(bundle, "App.IntegratedSystem.modbus0.alias"), "Bridge.Modbus.Serial", //
+				TranslationUtil.getTranslation(bundle, "App.IntegratedSystem.modbusToBattery.alias"),
+				"Bridge.Modbus.Serial", //
 				JsonUtils.buildJsonObject() //
 						.addProperty("enabled", true) //
 						.addProperty("baudRate", 19200) //
@@ -190,7 +276,7 @@ public final class FeneconHomeComponents {
 
 	/**
 	 * Creates a default external modbus component for a FENECON Home.
-	 * 
+	 *
 	 * @param bundle           the translation bundle
 	 * @param t                the current {@link ConfigurationTarget}
 	 * @param modbusIdExternal the id of the external modbus bridge
@@ -218,7 +304,7 @@ public final class FeneconHomeComponents {
 	/**
 	 * Creates a default external modbus component for external meters for a FENECON
 	 * Home.
-	 * 
+	 *
 	 * @param bundle           the translation bundle
 	 * @param t                the current {@link ConfigurationTarget}
 	 * @param modbusIdExternal the id of the external modbus bridge
@@ -229,6 +315,30 @@ public final class FeneconHomeComponents {
 			final ConfigurationTarget t, //
 			final String modbusIdExternal //
 	) {
+		return modbusForExternalMeters(bundle, t, modbusIdExternal, null);
+	}
+
+	/**
+	 * Creates a default external modbus component for external meters for a FENECON
+	 * Home.
+	 *
+	 * @param bundle           the translation bundle
+	 * @param t                the current {@link ConfigurationTarget}
+	 * @param modbusIdExternal the id of the external modbus bridge
+	 * @param deviceHardware   the current device hardware; can be null if not
+	 *                         available or needed
+	 * @return the {@link Component}
+	 */
+	public static EdgeConfig.Component modbusForExternalMeters(//
+			final ResourceBundle bundle, //
+			final ConfigurationTarget t, //
+			final String modbusIdExternal, //
+			final OpenemsAppInstance deviceHardware //
+	) {
+		final var portName = deviceHardware == null || !deviceHardware.appId.equals("App.OpenemsHardware.CM4S.Gen2")
+				? "/dev/bus0"
+				: "/dev/busUSB3";
+
 		return new EdgeConfig.Component(modbusIdExternal,
 				TranslationUtil.getTranslation(bundle, "App.IntegratedSystem.modbus2.alias"), "Bridge.Modbus.Serial", //
 				JsonUtils.buildJsonObject() //
@@ -236,7 +346,7 @@ public final class FeneconHomeComponents {
 						.addProperty("baudRate", 9600) //
 						.addProperty("databits", 8) //
 						.addProperty("parity", Parity.NONE) //
-						.addProperty("portName", "/dev/bus0") //
+						.addProperty("portName", portName) //
 						.addProperty("stopbits", "ONE") //
 						.onlyIf(t == ConfigurationTarget.ADD, b -> {
 							b.addProperty("invalidateElementsAfterReadErrors", 1) //
@@ -246,7 +356,7 @@ public final class FeneconHomeComponents {
 
 	/**
 	 * Creates a default predictor component for a FENECON Home.
-	 * 
+	 *
 	 * @param bundle the translation bundle
 	 * @param t      the current {@link ConfigurationTarget}
 	 * @return the {@link Component}
@@ -269,8 +379,19 @@ public final class FeneconHomeComponents {
 	}
 
 	/**
-	 * Creates a default ctrlEssSurplusFeedToGrid component for a FENECON Home.
+	 * Creates a default predictor task for a PersistenceModel Predictor.
 	 * 
+	 * @return the {@link Task}
+	 */
+	public static Task<PredictorManagerByCentralOrderConfiguration> persistencePredictorTask() {
+		return Tasks.predictorManagerByCentralOrder(//
+				new PredictorManagerByCentralOrderConfiguration.PredictorManagerComponent("predictor0",
+						"Predictor.PersistenceModel"));
+	}
+
+	/**
+	 * Creates a default ctrlEssSurplusFeedToGrid component for a FENECON Home.
+	 *
 	 * @param bundle the translation bundle
 	 * @param essId  the id of the ess
 	 * @return the {@link Component}
@@ -289,7 +410,7 @@ public final class FeneconHomeComponents {
 
 	/**
 	 * Creates a default power component for a FENECON Home.
-	 * 
+	 *
 	 * @return the {@link Component}
 	 */
 	public static EdgeConfig.Component power() {
@@ -300,7 +421,7 @@ public final class FeneconHomeComponents {
 
 	/**
 	 * Creates a default emergency meter component for a FENECON Home.
-	 * 
+	 *
 	 * @param bundle           the translation bundle
 	 * @param modbusIdExternal the id of the external modbus bridge
 	 * @return the {@link Component}
@@ -321,7 +442,7 @@ public final class FeneconHomeComponents {
 
 	/**
 	 * Creates a default ctrlEmergencyCapacityReserve component for a FENECON Home.
-	 * 
+	 *
 	 * @param bundle                  the translation bundle
 	 * @param t                       the current {@link ConfigurationTarget}
 	 * @param essId                   the id of the ess
@@ -351,7 +472,7 @@ public final class FeneconHomeComponents {
 
 	/**
 	 * Creates a default charger component for a FENECON Home.
-	 * 
+	 *
 	 * @param chargerId         the id of the charger
 	 * @param chargerAlias      the alias of the charger
 	 * @param batteryInverterId the id of the battery inverter
@@ -376,7 +497,7 @@ public final class FeneconHomeComponents {
 
 	/**
 	 * Creates a default charger component for a FENECON Home 20/30.
-	 * 
+	 *
 	 * @param chargerId         the id of the charger
 	 * @param chargerAlias      the alias of the charger
 	 * @param batteryInverterId the id of the battery inverter
@@ -399,18 +520,71 @@ public final class FeneconHomeComponents {
 	}
 
 	/**
-	 * Creates a default gridOptimizedCharge dependency for a FENECON Home.
+	 * Creates a goodwe charger component for a FENECON Home Gen2.
+	 *
+	 * @param chargerId         the id of the charger
+	 * @param pvNumber          the string number of the charger
+	 * @param alias             the alias for the charger
+	 * @param modbusIdExternal  the id of the modbus external
+	 * @param batteryInverterId the battery inver id
+	 * @return the component
+	 */
+	public static EdgeConfig.Component chargerPv(String chargerId, int pvNumber, String alias,
+			final String modbusIdExternal, final String batteryInverterId) {
+		return new EdgeConfig.Component(chargerId, alias, "GoodWe.Charger-PV" + pvNumber, //
+				JsonUtils.buildJsonObject() //
+						.addProperty("enabled", true) //
+						.addProperty("essOrBatteryInverter.id", batteryInverterId) //
+						.addProperty("modbus.id", modbusIdExternal) //
+						.addProperty("modbusUnitId", 247) //
+						.build());
+	}
+
+	/**
+	 * Creates a dynamic rippleControlReceiver component for a FENECON Home.
+	 *
+	 * @param bundle the translation bundle
+	 * @param ioId   the id of the io component
+	 * @return the {@link Component}
+	 * @throws OpenemsException when the io id is not provided
+	 */
+	public static EdgeConfig.Component dynamicRippleControlReceiverComponent(//
+			final ResourceBundle bundle, //
+			final String ioId //
+	) throws OpenemsException {
+		if (ioId == null) {
+			throw new OpenemsException("Cannot create dynamic ripple control receiver without a valid IO id.");
+		}
+		return new EdgeConfig.Component("ctrlEssRippleControlReceiver0",
+				TranslationUtil.getTranslation(bundle, "App.IntegratedSystem.dynamicRippleControlReceiver.alias"),
+				"Controller.Ess.RippleControlReceiver", JsonUtils.buildJsonObject() //
+						.addProperty("enabled", true) //
+						.addProperty("inputChannelAddress1", ioId + "/DigitalInput2") //
+						.addProperty("inputChannelAddress2", ioId + "/DigitalInput3") //
+						.addProperty("inputChannelAddress3", ioId + "/DigitalInput4") //
+						.build());
+	}
+
+	/**
+	 * Creates a dynamic rippleControlReceiver scheduler config for a FENECON Home.
 	 * 
-	 * @param t              the {@link ConfigurationTarget}
-	 * @param feedInType     the {@link FeedInType}
-	 * @param maxFeedInPower the max feed in power
+	 * @param appId the id of the calling app
+	 * @return the {@link SchedulerByCentralOrderConfiguration.SchedulerComponent}
+	 */
+	public static SchedulerByCentralOrderConfiguration.SchedulerComponent dynamicRippleControlReceiverScheduler(
+			final String appId //
+	) {
+		return new SchedulerByCentralOrderConfiguration.SchedulerComponent("ctrlEssRippleControlReceiver0",
+				"Controller.Ess.RippleControlReceiver", appId);
+	}
+
+	/**
+	 * Creates a default gridOptimizedCharge dependency for a FENECON Home.
+	 *
+	 * @param t the {@link ConfigurationTarget}
 	 * @return the {@link DependencyDeclaration}
 	 */
-	public static DependencyDeclaration gridOptimizedCharge(//
-			final ConfigurationTarget t, //
-			final FeedInType feedInType, //
-			final int maxFeedInPower //
-	) {
+	public static DependencyDeclaration gridOptimizedCharge(ConfigurationTarget t) {
 		return new DependencyDeclaration("GRID_OPTIMIZED_CHARGE", //
 				DependencyDeclaration.CreatePolicy.IF_NOT_EXISTING, //
 				DependencyDeclaration.UpdatePolicy.ALWAYS, //
@@ -420,21 +594,36 @@ public final class FeneconHomeComponents {
 				DependencyDeclaration.AppDependencyConfig.create() //
 						.setAppId("App.PvSelfConsumption.GridOptimizedCharge") //
 						.setProperties(JsonUtils.buildJsonObject() //
-								.addProperty(GridOptimizedCharge.Property.SELL_TO_GRID_LIMIT_ENABLED.name(),
-										feedInType == FeedInType.DYNAMIC_LIMITATION) //
 								.onlyIf(t == ConfigurationTarget.ADD, //
 										j -> j.addProperty(GridOptimizedCharge.Property.MODE.name(), "AUTOMATIC")) //
-								.onlyIf(feedInType == FeedInType.DYNAMIC_LIMITATION,
-										b -> b.addProperty(
-												GridOptimizedCharge.Property.MAXIMUM_SELL_TO_GRID_POWER.name(),
-												maxFeedInPower)) //
+								.build())
+						.build());
+	}
+
+	/**
+	 * Creates a default stateLED dependency for a FENECON Home.
+	 * 
+	 * @return the {@link DependencyDeclaration}
+	 */
+	public static DependencyDeclaration stateLed() {
+		return new DependencyDeclaration("STATE_LED", //
+				DependencyDeclaration.CreatePolicy.IF_NOT_EXISTING, //
+				DependencyDeclaration.UpdatePolicy.IF_MINE, //
+				DependencyDeclaration.DeletePolicy.IF_MINE, //
+				DependencyDeclaration.DependencyUpdatePolicy.ALLOW_ONLY_UNCONFIGURED_PROPERTIES, //
+				DependencyDeclaration.DependencyDeletePolicy.NOT_ALLOWED, //
+				DependencyDeclaration.AppDependencyConfig.create() //
+						.setAppId("App.System.Fenecon.Home") //
+						.setInitialProperties(JsonUtils.buildJsonObject() //
+								.addProperty(SystemFeneconHome.Property.RELAY_ID.name(), "io1") //
+								.addProperty(SystemFeneconHome.Property.LED_ORDER.name(), "DEFAULT_RED_BLUE_GREEN") //
 								.build())
 						.build());
 	}
 
 	/**
 	 * Creates a default gridOptimizedCharge dependency for a FENECON Home.
-	 * 
+	 *
 	 * @param t           the {@link ConfigurationTarget}
 	 * @param essId       the id of the ess
 	 * @param gridMeterId the id of the grid meter
@@ -445,12 +634,31 @@ public final class FeneconHomeComponents {
 			final String essId, //
 			final String gridMeterId //
 	) {
+		return selfConsumptionOptimization(t, essId, gridMeterId,
+				DependencyDeclaration.DependencyDeletePolicy.NOT_ALLOWED);
+	}
+
+	/**
+	 * Creates a default gridOptimizedCharge dependency for a FENECON Home.
+	 *
+	 * @param t            the {@link ConfigurationTarget}
+	 * @param essId        the id of the ess
+	 * @param gridMeterId  the id of the grid meter
+	 * @param deletePolicy the {@link DependencyDeclaration.DependencyDeletePolicy}
+	 * @return the {@link DependencyDeclaration}
+	 */
+	public static DependencyDeclaration selfConsumptionOptimization(//
+			final ConfigurationTarget t, //
+			final String essId, //
+			final String gridMeterId, //
+			final DependencyDeclaration.DependencyDeletePolicy deletePolicy //
+	) {
 		return new DependencyDeclaration("SELF_CONSUMPTION_OPTIMIZATION", //
 				DependencyDeclaration.CreatePolicy.IF_NOT_EXISTING, //
 				DependencyDeclaration.UpdatePolicy.NEVER, //
 				DependencyDeclaration.DeletePolicy.IF_MINE, //
 				DependencyDeclaration.DependencyUpdatePolicy.ALLOW_ONLY_UNCONFIGURED_PROPERTIES, //
-				DependencyDeclaration.DependencyDeletePolicy.NOT_ALLOWED, //
+				deletePolicy, //
 				DependencyDeclaration.AppDependencyConfig.create() //
 						.setAppId("App.PvSelfConsumption.SelfConsumptionOptimization") //
 						.setProperties(JsonUtils.buildJsonObject() //
@@ -462,7 +670,7 @@ public final class FeneconHomeComponents {
 
 	/**
 	 * Creates a default prepareBatteryExtension dependency for a FENECON Home.
-	 * 
+	 *
 	 * @return the {@link DependencyDeclaration}
 	 */
 	public static DependencyDeclaration prepareBatteryExtension() {
@@ -477,6 +685,158 @@ public final class FeneconHomeComponents {
 						.setProperties(JsonUtils.buildJsonObject() //
 								.addProperty(PrepareBatteryExtension.Property.TARGET_SOC.name(), 30) //
 								.build())
+						.build());
+	}
+
+	/**
+	 * Creates a default essLimiter14a dependency for a FENECON Home.
+	 *
+	 * @param deviceHardware the hardware app which is installed
+	 * @param ioId           the id of the input component
+	 * @return the {@link DependencyDeclaration}
+	 * @throws OpenemsException on error
+	 */
+	public static DependencyDeclaration essLimiter14a(//
+			final OpenemsAppInstance deviceHardware, //
+			final String ioId //
+	) throws OpenemsException {
+		if (!isLimiter14aCompatible(deviceHardware)) {
+			throw new OpenemsException("Hardware '" + deviceHardware.appId + "' not supported for ess limiter 14a.");
+		}
+		if (ioId == null) {
+			throw new OpenemsException("Cannot create Limiter14a dependency without a valid IO id.");
+		}
+		return new DependencyDeclaration("ESS_LIMITER_14A", //
+				DependencyDeclaration.CreatePolicy.IF_NOT_EXISTING, //
+				DependencyDeclaration.UpdatePolicy.NEVER, //
+				DependencyDeclaration.DeletePolicy.IF_MINE, //
+				DependencyDeclaration.DependencyUpdatePolicy.ALLOW_ONLY_UNCONFIGURED_PROPERTIES, //
+				DependencyDeclaration.DependencyDeletePolicy.NOT_ALLOWED, //
+				DependencyDeclaration.AppDependencyConfig.create() //
+						.setAppId("App.Ess.Limiter14a") //
+						.setProperties(JsonUtils.buildJsonObject() //
+								.addProperty(Limiter14a.Property.ESS_ID.name(), "ess0") //
+								.addProperty(Limiter14a.Property.INPUT_CHANNEL_ADDRESS.name(), ioId + "/DigitalInput1") //
+								.build()) //
+						.build());
+	}
+
+	/**
+	 * Creates a default essLimiter14a dependency for a FENECON Home which can be
+	 * different depending on the hardware type.
+	 *
+	 * @param appManagerUtil the {@link AppManagerUtil} to get the hardware type
+	 * @return the {@link DependencyDeclaration} of the specific hardware or null if
+	 *         not specified for the current hardware
+	 * @throws OpenemsNamedException on error
+	 */
+	public static DependencyDeclaration essLimiter14aToHardware(AppManagerUtil appManagerUtil)
+			throws OpenemsNamedException {
+		final var deviceHardware = appManagerUtil
+				.getFirstInstantiatedAppByCategories(OpenemsAppCategory.OPENEMS_DEVICE_HARDWARE);
+		return essLimiter14aToHardware(appManagerUtil, deviceHardware);
+	}
+
+	/**
+	 * Creates a default essLimiter14a dependency for a FENECON Home which can be
+	 * different depending on the hardware type.
+	 *
+	 * @param appManagerUtil the {@link AppManagerUtil} to get the hardware type
+	 * @param deviceHardware the hardware app which is installed
+	 * @return the {@link DependencyDeclaration} of the specific hardware or null if
+	 *         not specified for the current hardware
+	 * @throws OpenemsNamedException on error
+	 */
+	public static DependencyDeclaration essLimiter14aToHardware(//
+			AppManagerUtil appManagerUtil, //
+			OpenemsAppInstance deviceHardware //
+	) throws OpenemsNamedException {
+		return essLimiter14a(deviceHardware, getGpioId(appManagerUtil, deviceHardware));
+	}
+
+	/**
+	 * Gets the gpio id of the provided hardware or throws an error if not
+	 * supported.
+	 *
+	 * @param appManagerUtil the {@link AppManagerUtil} to get the hardware type
+	 * @param deviceHardware the hardware app which is installed
+	 * @return the {@link DependencyDeclaration} of the specific hardware or null if
+	 *         not specified for the current hardware
+	 * @throws OpenemsNamedException on error
+	 */
+	public static String getGpioId(//
+			AppManagerUtil appManagerUtil, //
+			OpenemsAppInstance deviceHardware //
+	) throws OpenemsNamedException {
+		if (deviceHardware == null) {
+			return null;
+		}
+
+		for (var dependency : deviceHardware.dependencies) {
+			if (!"IO_GPIO".equals(dependency.key)) {
+				continue;
+			}
+			final var instance = appManagerUtil.findInstanceByIdOrError(dependency.instanceId);
+			return instance.properties.get(IoGpio.Property.IO_ID.name()).getAsString();
+		}
+		return null;
+	}
+
+	/**
+	 * Checks if the provided id of the app is compatible with the
+	 * {@link Limiter14a}.
+	 *
+	 * @param hardwareInstance the current installed hardware instance; nullable
+	 * @return true if there is a default relay for it; else false
+	 */
+	public static final boolean isLimiter14aCompatible(OpenemsAppInstance hardwareInstance) {
+		return isHardwareRelayInstalled(hardwareInstance);
+	}
+
+	/**
+	 * Checks if the provided id of the app is compatible with the
+	 * {@link SystemFeneconHome}.
+	 *
+	 * @param hardwareInstance the current installed hardware instance; nullable
+	 * @return true if there is a default relay for it; else false
+	 */
+	public static final boolean isStateLedCompatible(OpenemsAppInstance hardwareInstance) {
+		return isHardwareRelayInstalled(hardwareInstance);
+	}
+
+	/**
+	 * Checks if the current installed hardware instance has a relay installed.
+	 *
+	 * @param hardwareInstance the current installed hardware instance; nullable
+	 * @return true if there is a default relay for it; else false
+	 */
+	private static final boolean isHardwareRelayInstalled(OpenemsAppInstance hardwareInstance) {
+		if (hardwareInstance == null) {
+			return false;
+		}
+		return switch (hardwareInstance.appId) {
+		case "App.OpenemsHardware.CM3", "App.OpenemsHardware.CM4", "App.OpenemsHardware.CM4S",
+				"App.OpenemsHardware.CM4S.Gen2" ->
+			true;
+		default -> false;
+		};
+	}
+
+	/**
+	 * Creates a default predictionUnmanagedConsumption dependency for a FENECON
+	 * Home.
+	 *
+	 * @return the {@link DependencyDeclaration}
+	 */
+	public static DependencyDeclaration predictionUnmanagedConsumption() {
+		return new DependencyDeclaration("PREDICTION_UNMANAGED_CONSUMPTION", //
+				DependencyDeclaration.CreatePolicy.IF_NOT_EXISTING, //
+				DependencyDeclaration.UpdatePolicy.ALWAYS, //
+				DependencyDeclaration.DeletePolicy.IF_MINE, //
+				DependencyDeclaration.DependencyUpdatePolicy.ALLOW_ONLY_UNCONFIGURED_PROPERTIES, //
+				DependencyDeclaration.DependencyDeletePolicy.NOT_ALLOWED, //
+				DependencyDeclaration.AppDependencyConfig.create() //
+						.setAppId("App.Prediction.UnmanagedConsumption") //
 						.build());
 	}
 

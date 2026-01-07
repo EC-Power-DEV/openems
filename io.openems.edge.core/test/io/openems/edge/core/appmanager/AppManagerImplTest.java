@@ -14,21 +14,21 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 
-import io.openems.common.exceptions.OpenemsException;
 import io.openems.common.session.Language;
 import io.openems.common.utils.JsonUtils;
 import io.openems.edge.app.evcs.KebaEvcs;
-import io.openems.edge.app.integratedsystem.FeneconHome;
+import io.openems.edge.app.integratedsystem.FeneconHome10;
 import io.openems.edge.app.timeofusetariff.AwattarHourly;
 import io.openems.edge.app.timeofusetariff.StromdaoCorrently;
 import io.openems.edge.common.host.Host;
 import io.openems.edge.core.appmanager.validator.ValidatorConfig;
+import io.openems.edge.predictor.api.manager.PredictorManager;
 
 public class AppManagerImplTest {
 
 	private AppManagerTestBundle appManagerTestBundle;
 
-	private FeneconHome homeApp;
+	private FeneconHome10 homeApp;
 
 	private KebaEvcs kebaEvcsApp;
 	private AwattarHourly awattarApp;
@@ -46,10 +46,11 @@ public class AppManagerImplTest {
 		final var emergencyReserveEnabled = false;
 
 		final var shadowManagmentDisabled = false;
+		final var naProtectionEnabled = false;
 
 		// Battery-Inverter Settings
 		final var safetyCountry = "AUSTRIA";
-		final var maxFeedInPower = 10000;
+		final var maxFeedInPower = -1;
 		final var feedInSetting = "LAGGING_0_95";
 
 		var componentConfig = JsonUtils.buildJsonObject() //
@@ -127,9 +128,10 @@ public class AppManagerImplTest {
 								.addProperty("modbusUnitId", 247) //
 								.addProperty("safetyCountry", safetyCountry) //
 								.addProperty("backupEnable", "DISABLE") //
-								.addProperty("feedPowerEnable", "ENABLE") //
-								.addProperty("feedPowerPara", 10000) //
+								.addProperty("feedPowerEnable", "DISABLE") //
+								.addProperty("feedPowerPara", -1) //
 								.addProperty("controlMode", "SMART") //
+								.addProperty("naProtectionEnable", naProtectionEnabled ? "ENABLE" : "DISABLE") //
 								.addProperty("setfeedInPowerSettings", "LAGGING_0_95") //
 								.addProperty("mpptForShadowEnable", shadowManagmentDisabled ? "DISABLE" : "ENABLE") //
 								.addProperty("rcrEnable", "DISABLE") //
@@ -195,6 +197,22 @@ public class AppManagerImplTest {
 								.addProperty("endCondition", "CAPACITY_CHANGED") //
 								.build()) //
 						.build()) //
+				.add("predictor2", JsonUtils.buildJsonObject() //
+						.addProperty("factoryId", "Predictor.ProfileClusteringModel") //
+						.addProperty("alias", "Verbrauchsprognose") //
+						.add("properties", JsonUtils.buildJsonObject() //
+								.addProperty("enabled", true) //
+								.build()) //
+						.build()) //
+				.add("system0", JsonUtils.buildJsonObject() //
+						.addProperty("factoryId", "System.Fenecon.Home") //
+						.addProperty("alias", "Status-LED") //
+						.add("properties", JsonUtils.buildJsonObject() //
+								.addProperty("enabled", true) //
+								.addProperty("relayId", "io1") //
+								.addProperty("ledOrder", "DEFAULT_RED_BLUE_GREEN") //
+								.build()) //
+						.build()) //
 				.add("scheduler0", JsonUtils.buildJsonObject() //
 						.addProperty("factoryId", "Scheduler.AllAlphabetically") //
 						.add("properties", JsonUtils.buildJsonObject() //
@@ -211,6 +229,14 @@ public class AppManagerImplTest {
 						.addProperty("factoryId", "Ess.Power") //
 						.add("properties", JsonUtils.buildJsonObject() //
 								.addProperty("enablePid", false) //
+								.build()) //
+						.build()) //
+				.add(PredictorManager.SINGLETON_COMPONENT_ID, JsonUtils.buildJsonObject() //
+						.addProperty("factoryId", PredictorManager.SINGLETON_SERVICE_PID) //
+						.addProperty("alias", "") //
+						.add("properties", JsonUtils.buildJsonObject() //
+								.add("predictor.ids", JsonUtils.buildJsonArray() //
+										.build()) //
 								.build()) //
 						.build()) //
 				.add(Host.SINGLETON_COMPONENT_ID, JsonUtils.buildJsonObject() //
@@ -248,13 +274,13 @@ public class AppManagerImplTest {
 								.addProperty("instanceId", UUID.randomUUID().toString()) //
 								.add("properties", JsonUtils.buildJsonObject() //
 										.addProperty("SAFETY_COUNTRY", safetyCountry) //
-										.addProperty("MAX_FEED_IN_POWER", maxFeedInPower) //
 										.addProperty("FEED_IN_SETTING", feedInSetting) //
 										.addProperty("HAS_AC_METER", false) //
 										.addProperty("HAS_DC_PV1", false) //
 										.addProperty("HAS_DC_PV2", false) //
 										.addProperty("EMERGENCY_RESERVE_ENABLED", emergencyReserveEnabled) //
 										.addProperty("SHADOW_MANAGEMENT_DISABLED", shadowManagmentDisabled) //
+										.addProperty("NA_PROTECTION_ENABLED", naProtectionEnabled) //
 										.build()) //
 								.build()) //
 						.add(JsonUtils.buildJsonObject() //
@@ -263,7 +289,6 @@ public class AppManagerImplTest {
 								.addProperty("instanceId", UUID.randomUUID().toString()) //
 								.add("properties", JsonUtils.buildJsonObject() //
 										.addProperty("SELL_TO_GRID_LIMIT_ENABLED", true) //
-										.addProperty("MAXIMUM_SELL_TO_GRID_POWER", maxFeedInPower) //
 										.addProperty("MODE", "AUTOMATIC") //
 										.build()) //
 								.build())
@@ -284,29 +309,49 @@ public class AppManagerImplTest {
 										.addProperty("TARGET_SOC", 30) //
 										.build()) //
 								.build())
+						.add(JsonUtils.buildJsonObject() //
+								.addProperty("appId", "App.Prediction.UnmanagedConsumption") //
+								.addProperty("alias", "") //
+								.addProperty("instanceId", UUID.randomUUID().toString()) //
+								.add("properties", JsonUtils.buildJsonObject() //
+										.build()) //
+								.build())
+						.add(JsonUtils.buildJsonObject() //
+								.addProperty("appId", "App.System.Fenecon.Home") //
+								.addProperty("alias", "") //
+								.addProperty("instanceId", UUID.randomUUID().toString()) //
+								.add("properties",
+										JsonUtils.buildJsonObject() //
+										.addProperty("RELAY_ID", "io1") //
+										.addProperty("LED_ORDER", "DEFAULT_RED_BLUE_GREEN") //
+										.build()) //
+								.build())
 						.build().toString()) //
 				.build();
 
 		this.appManagerTestBundle = new AppManagerTestBundle(componentConfig, initialConfig, t -> {
 			return ImmutableList.of(//
-					this.homeApp = Apps.feneconHome(t), //
+					this.homeApp = Apps.feneconHome10(t), //
 					Apps.gridOptimizedCharge(t), //
 					Apps.selfConsumptionOptimization(t), //
 					Apps.prepareBatteryExtension(t), //
+					Apps.stateLed(t), //
 
 					this.kebaEvcsApp = Apps.kebaEvcs(t), //
 					this.awattarApp = Apps.awattarHourly(t), //
-					this.stromdao = Apps.stromdaoCorrently(t) //
+					this.stromdao = Apps.stromdaoCorrently(t), //
+					Apps.predictionUnmanagedConsumption(t)//
 			);
 		});
 	}
 
 	@Test
-	public void testAppValidateWorker() throws OpenemsException, Exception {
+	public void testAppValidateWorker() throws Exception {
 		final var componentTask = this.appManagerTestBundle.addComponentAggregateTask();
 		this.appManagerTestBundle.addSchedulerByCentralOrderAggregateTask(componentTask);
+		this.appManagerTestBundle.addPredictorManagerByCentralOrderAggregateTask();
 
-		assertEquals(this.appManagerTestBundle.sut.instantiatedApps.size(), 4);
+		assertEquals(6, this.appManagerTestBundle.sut.instantiatedApps.size());
 
 		this.appManagerTestBundle.assertNoValidationErrors();
 	}
@@ -323,7 +368,7 @@ public class AppManagerImplTest {
 
 	@Test
 	public void testCheckCardinalitySingle() throws Exception {
-		var checkable = this.appManagerTestBundle.checkablesBundle.checkCardinality();
+		var checkable = this.appManagerTestBundle.getCheckCardinality();
 		checkable.setProperties(new ValidatorConfig.MapBuilder<>(new TreeMap<String, Object>()) //
 				.put("openemsApp", this.homeApp) //
 				.build());
@@ -337,7 +382,7 @@ public class AppManagerImplTest {
 				UUID.randomUUID(), JsonUtils.buildJsonObject().build(), null));
 		this.appManagerTestBundle.sut.instantiatedApps.add(new OpenemsAppInstance(this.kebaEvcsApp.getAppId(), "alias",
 				UUID.randomUUID(), JsonUtils.buildJsonObject().build(), null));
-		var checkable = this.appManagerTestBundle.checkablesBundle.checkCardinality();
+		var checkable = this.appManagerTestBundle.getCheckCardinality();
 		checkable.setProperties(new ValidatorConfig.MapBuilder<>(new TreeMap<String, Object>()) //
 				.put("openemsApp", this.kebaEvcsApp) //
 				.build());
@@ -349,12 +394,11 @@ public class AppManagerImplTest {
 	public void testCheckCardinalitySingleInCategorie() throws Exception {
 		this.appManagerTestBundle.sut.instantiatedApps.add(new OpenemsAppInstance(this.awattarApp.getAppId(), "alias",
 				UUID.randomUUID(), JsonUtils.buildJsonObject().build(), null));
-		var checkable = this.appManagerTestBundle.checkablesBundle.checkCardinality();
+		var checkable = this.appManagerTestBundle.getCheckCardinality();
 		checkable.setProperties(new ValidatorConfig.MapBuilder<>(new TreeMap<String, Object>()) //
 				.put("openemsApp", this.stromdao) //
 				.build());
 		assertFalse(checkable.check());
 		assertNotNull(checkable.getErrorMessage(Language.DEFAULT));
 	}
-
 }

@@ -1,16 +1,44 @@
 apply plugin: 'com.android.application'
 
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+
 def keystorePropertiesFile = rootProject.file("keystore.properties")
 def keystoreProperties = new Properties()
 keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+def getVersionCode() {
+    def dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
+    return dateStr.toInteger()
+}
+
+def getVersion() {
+    def versionEnv = System.getenv("VERSION")
+    if(versionEnv == null) {
+      logger.warn('WARNING: environment VERSION not specified! using `SNAPSHOT` instead.')
+      return [name: 'SNAPSHOT', code: 1]
+    }
+    def v = versionEnv.split('\\-')[0]
+    def c = getVersionCode()
+    logger.lifecycle("OpenEMS-Version: ${v}(${c})")
+    return [name: v, code: c]
+}
+
+def version = getVersion();
 
 android {
     compileSdkVersion rootProject.ext.compileSdkVersion
     defaultConfig {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2024090000
-        versionName "2024.9.0-SNAPSHOT"
+        versionCode version.code
+        versionName version.name
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -19,7 +47,7 @@ android {
         }
         multiDexEnabled true //important
     }
-    
+
     flavorDimensions "version"
     productFlavors {
         // create("example") {

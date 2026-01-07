@@ -1,23 +1,27 @@
 // @ts-strict-ignore
-import { Component, OnDestroy, OnInit } from "@angular/core";
+import { Component, effect, OnDestroy } from "@angular/core";
 import { FormGroup } from "@angular/forms";
 import { ActivatedRoute, Router } from "@angular/router";
-import { InfiniteScrollCustomEvent } from "@ionic/angular";
-import { TranslateService } from '@ngx-translate/core';
+import { InfiniteScrollCustomEvent, ViewWillEnter } from "@ionic/angular";
+import { TranslateService } from "@ngx-translate/core";
 import { Subject } from "rxjs";
-import { filter, take } from 'rxjs/operators';
+import { filter, take } from "rxjs/operators";
+import { GetEdgesRequest } from "src/app/shared/jsonrpc/request/getEdgesRequest";
 import { Pagination } from "src/app/shared/service/pagination";
+import { UserService } from "src/app/shared/service/user.service";
 import { Edge, Service, Utils, Websocket } from "src/app/shared/shared";
 import { Role } from "src/app/shared/type/role";
 import { environment } from "src/environments";
-
-import { ChosenFilter } from "../filter/filter.component";
+import { ChosenFilter, FilterComponent } from "../filter/filter.component";
+import { ORDER_STATES } from "../shared/order-state";
+import { SUM_STATES } from "../shared/sumState";
 
 @Component({
-    selector: 'overview',
-    templateUrl: './overview.component.html',
+    selector: "overview",
+    templateUrl: "./overview.component.html",
+    standalone: false,
 })
-export class OverViewComponent implements OnInit, OnDestroy {
+export class OverViewComponent implements ViewWillEnter, OnDestroy {
     public environment = environment;
     /** True, if there is no access to any Edge. */
     public noEdges: boolean = false;
@@ -29,7 +33,13 @@ export class OverViewComponent implements OnInit, OnDestroy {
     public filteredEdges: Edge[] = [];
 
     protected loading: boolean = false;
-    protected searchParams: Map<string, ChosenFilter['value']> = new Map();
+    protected searchParams: Map<string, ChosenFilter["value"]> = new Map();
+    protected isAtLeastInstaller: boolean = false;
+    protected readonly filters: FilterComponent["allFilters"] = [
+        ORDER_STATES(this.translate),
+        environment.PRODUCT_TYPES(this.translate),
+        SUM_STATES(this.translate),
+    ];
 
     private stopOnDestroy: Subject<void> = new Subject<void>();
     private page = 0;
@@ -40,27 +50,35 @@ export class OverViewComponent implements OnInit, OnDestroy {
     /** True, if all available edges for this user had been retrieved */
     private limitReached: boolean = false;
 
+    private lastReqId: string | null = null;
+
     constructor(
         public service: Service,
         public websocket: Websocket,
         public utils: Utils,
-        private router: Router,
-        private route: ActivatedRoute,
         public translate: TranslateService,
         public pagination: Pagination,
-    ) { }
+        protected route: ActivatedRoute,
+        private router: Router,
+        private userService: UserService,
+    ) {
 
-    ngOnInit() {
+        effect(() => {
+            const user = this.userService.currentUser();
+
+            if (user) {
+                this.isAtLeastInstaller = user.isAtLeast(Role.INSTALLER);
+            }
+        });
+    }
+
+    ionViewWillEnter() {
         this.page = 0;
         this.filteredEdges = [];
         this.limitReached = false;
         this.service.metadata.pipe(filter(metadata => !!metadata), take(1)).subscribe(() => {
             this.init();
         });
-    }
-
-    ionViewWillEnter() {
-        this.service.setCurrentComponent('', this.route);
     }
 
     /**
@@ -100,8 +118,20 @@ export class OverViewComponent implements OnInit, OnDestroy {
                     searchParamsObj[key] = value;
                 }
             }
-            this.service.getEdges(this.page, this.query, this.limit, searchParamsObj)
+            const req = new GetEdgesRequest({
+                page: this.page,
+                ...(this.query && this.query != "" && { query: this.query }),
+                ...(this.limit && { limit: this.limit }),
+                ...(searchParamsObj && { searchParams: searchParamsObj }),
+            });
+
+            this.lastReqId = req.id;
+
+            this.service.getEdges(req)
                 .then((edges) => {
+                    if (this.lastReqId !== req.id) {
+                        resolve(this.filteredEdges);
+                    }
                     this.limitReached = edges.length < this.limit;
                     resolve(edges);
                 }).catch((err) => {
@@ -120,7 +150,7 @@ export class OverViewComponent implements OnInit, OnDestroy {
      *
      * @param event from template passed event
      */
-    protected searchOnChange(searchParams?: Map<string, ChosenFilter['value']>) {
+    protected searchOnChange(searchParams?: Map<string, ChosenFilter["value"]>) {
 
         if (searchParams) {
             this.searchParams = searchParams;
@@ -136,6 +166,7 @@ export class OverViewComponent implements OnInit, OnDestroy {
     }
 
     private init() {
+
         this.loadNextPage().then((edges) => {
             this.service.metadata
                 .pipe(
@@ -143,7 +174,6 @@ export class OverViewComponent implements OnInit, OnDestroy {
                     take(1),
                 )
                 .subscribe(metadata => {
-
                     const edgeIds = Object.keys(metadata.edges);
                     this.noEdges = edgeIds.length === 0;
                     this.loggedInUserCanInstall = Role.isAtLeast(metadata.user.globalRole, "installer");
@@ -151,10 +181,10 @@ export class OverViewComponent implements OnInit, OnDestroy {
                     // Forward directly to device page, if
                     // - Direct local access to Edge
                     // - No installer (i.e. guest or owner) and access to only one Edge
-                    if (environment.backend == 'OpenEMS Edge' || (!this.loggedInUserCanInstall && edgeIds.length == 1)) {
+                    if (environment.backend == "OpenEMS Edge" || (!this.loggedInUserCanInstall && edgeIds.length == 1)) {
                         const edge = metadata.edges[edgeIds[0]];
                         setTimeout(() => {
-                            this.router.navigate(['/device', edge.id]);
+                            this.router.navigate(["/device", edge.id]);
                         }, 100);
                         return;
                     }

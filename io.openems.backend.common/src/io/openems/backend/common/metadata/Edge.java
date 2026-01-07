@@ -1,5 +1,6 @@
 package io.openems.backend.common.metadata;
 
+import java.time.Clock;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -30,8 +31,8 @@ public class Edge {
 	private final AtomicReference<ZonedDateTime> lastmessage = new AtomicReference<>(null);
 	private boolean isOnline = false;
 	private final AtomicReference<Level> sumState = new AtomicReference<>(null);
-
 	private final List<EdgeUser> user;
+	private final AtomicReference<JsonObject> settings = new AtomicReference<>(null);
 
 	public Edge(Metadata parent, String id, String comment, String version, String producttype,
 			ZonedDateTime lastmessage) {
@@ -76,6 +77,7 @@ public class Edge {
 				.addProperty("online", this.isOnline) //
 				.addProperty("sumState", this.sumState.get()) //
 				.addPropertyIfNotNull("lastmessage", this.lastmessage.get()) //
+				.addIfNotNull("settings", this.settings.get()) //
 				.build();
 	}
 
@@ -89,6 +91,7 @@ public class Edge {
 				+ "lastmessage=" + this.lastmessage + ", " //
 				+ "isOnline=" + this.isOnline + ", " //
 				+ "sumState=" + this.sumState //
+				+ "settings=" + this.settings //
 				+ "]";
 	}
 
@@ -121,13 +124,13 @@ public class Edge {
 	 * ON_SET_LASTMESSAGE event; but only max one event per Minute.
 	 */
 	public void setLastmessage() {
-		this.setLastmessage(ZonedDateTime.now());
+		this.setLastmessage(ZonedDateTime.now(Clock.systemUTC()));
 	}
 
 	/**
 	 * Sets the Last-Message-Timestamp (truncated to Minutes) and emits a
 	 * ON_SET_LASTMESSAGE event; but only max one event per Minute.
-	 * 
+	 *
 	 * @param timestamp the Last-Message-Timestamp
 	 */
 	public void setLastmessage(ZonedDateTime timestamp) {
@@ -246,6 +249,15 @@ public class Edge {
 	}
 
 	/**
+	 * Settings JSON to store additional information.
+	 * 
+	 * @return the settings JSON
+	 */
+	public JsonObject getSettings() {
+		return this.settings.get();
+	}
+
+	/**
 	 * Sets the sumState and emits a ON_SET_SUM_STATE event.
 	 *
 	 * @param sumState the sumState
@@ -307,6 +319,14 @@ public class Edge {
 		public static final class OnSetConfig {
 			public static final String EDGE = "Edge:Edge";
 			public static final String CONFIG = "Config:EdgeConfig";
+		}
+
+		public static final String ON_UPDATE_CONFIG = Events.TOPIC_BASE + "ON_UPDATE_CONFIG";
+
+		public static final class OnUpdateConfig {
+			public static final String EDGE_ID = "EdgeId:String";
+			public static final String OLD_CONFIG = "OldConfig:EdgeConfig";
+			public static final String NEW_CONFIG = "NewConfig:EdgeConfig";
 		}
 
 		public static final String ON_SET_LASTMESSAGE = Events.TOPIC_BASE + "ON_SET_LASTMESSAGE";

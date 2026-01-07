@@ -1,20 +1,22 @@
 // @ts-strict-ignore
-import { Component, Input, OnChanges, OnDestroy, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
-import * as Chart from 'chart.js';
-import { AbstractHistoryChart } from 'src/app/edge/history/abstracthistorychart';
-import { AbstractHistoryChart as NewAbstractHistoryChart } from 'src/app/shared/components/chart/abstracthistorychart';
-import { ChartConstants } from 'src/app/shared/components/chart/chart.constants';
-import { ComponentJsonApiRequest } from 'src/app/shared/jsonrpc/request/componentJsonApiRequest';
-import { ChartAxis, HistoryUtils, TimeOfUseTariffUtils, Utils, YAxisTitle } from 'src/app/shared/service/utils';
-import { ChannelAddress, Edge, EdgeConfig, Service, Websocket } from 'src/app/shared/shared';
-import { GetScheduleRequest } from '../../../../../../shared/jsonrpc/request/getScheduleRequest';
-import { GetScheduleResponse } from '../../../../../../shared/jsonrpc/response/getScheduleResponse';
+import { Component, Input, OnChanges, OnDestroy, OnInit } from "@angular/core";
+import { ActivatedRoute } from "@angular/router";
+import { TranslateService } from "@ngx-translate/core";
+import * as Chart from "chart.js";
+import { AbstractHistoryChart } from "src/app/edge/history/abstracthistorychart";
+import { AbstractHistoryChart as NewAbstractHistoryChart } from "src/app/shared/components/chart/abstracthistorychart";
+import { ChartConstants } from "src/app/shared/components/chart/chart.constants";
+import { ComponentJsonApiRequest } from "src/app/shared/jsonrpc/request/componentJsonApiRequest";
+import { ChannelAddress, Edge, EdgeConfig, Service, Websocket } from "src/app/shared/shared";
+import { ColorUtils } from "src/app/shared/utils/color/color.utils";
+import { ChartAxis, HistoryUtils, TimeOfUseTariffUtils, Utils, YAxisType } from "src/app/shared/utils/utils";
+import { GetScheduleRequest } from "../../../../../../shared/jsonrpc/request/getScheduleRequest";
+import { GetScheduleResponse } from "../../../../../../shared/jsonrpc/response/getScheduleResponse";
 
 @Component({
-    selector: 'powerSocChart',
-    templateUrl: '../../../../../history/abstracthistorychart.html',
+    selector: "powerSocChart",
+    templateUrl: "../../../../../history/abstracthistorychart.html",
+    standalone: false,
 })
 export class SchedulePowerAndSocChartComponent extends AbstractHistoryChart implements OnInit, OnChanges, OnDestroy {
 
@@ -38,7 +40,6 @@ export class SchedulePowerAndSocChartComponent extends AbstractHistoryChart impl
 
     public ngOnInit() {
         this.service.startSpinner(this.spinnerId);
-        this.service.setCurrentComponent('', this.route);
     }
 
     public ngOnDestroy() {
@@ -52,12 +53,18 @@ export class SchedulePowerAndSocChartComponent extends AbstractHistoryChart impl
     protected setLabel() {
         this.options = this.createDefaultChartOptions();
         const translate = this.translate;
-        this.options.plugins.tooltip.callbacks.label = function (item: Chart.TooltipItem<any>) {
+        this.options.plugins = {
+            tooltip: {
+                callbacks: {
+                    label: function (item: Chart.TooltipItem<any>) {
 
-            const label = item.dataset.label;
-            const value = item.dataset.data[item.dataIndex];
+                        const label = item.dataset.label;
+                        const value = item.dataset.data[item.dataIndex];
 
-            return TimeOfUseTariffUtils.getLabel(value, label, translate);
+                        return TimeOfUseTariffUtils.getLabel(value, label, translate);
+                    },
+                },
+            },
         };
     }
 
@@ -92,93 +99,93 @@ export class SchedulePowerAndSocChartComponent extends AbstractHistoryChart impl
             };
 
             datasets.push({
-                type: 'line',
-                label: this.translate.instant('General.gridBuy'),
+                type: "line",
+                label: this.translate.instant("GENERAL.GRID_BUY"),
                 data: gridBuyArray.map(v => Utils.divideSafely(v, 1000)), // [W] to [kW]
                 hidden: true,
                 order: 1,
             });
             this.colors.push({
-                backgroundColor: 'rgba(0,0,0, 0.2)',
-                borderColor: 'rgba(0,0,0, 1)',
+                backgroundColor: ColorUtils.rgbStringToRgba(ChartConstants.Colors.BLUE_GREY, 0.2),
+                borderColor: ChartConstants.Colors.BLUE_GREY,
             });
 
             datasets.push({
-                type: 'line',
-                label: this.translate.instant('General.gridSell'),
+                type: "line",
+                label: this.translate.instant("GENERAL.GRID_SELL"),
                 data: gridSellArray.map(v => Utils.divideSafely(v, 1000)), // [W] to [kW]
                 hidden: true,
                 order: 1,
             });
             this.colors.push({
-                backgroundColor: 'rgba(0,0,200, 0.2)',
-                borderColor: 'rgba(0,0,200, 1)',
+                backgroundColor: ColorUtils.rgbStringToRgba(ChartConstants.Colors.PURPLE, 0.2),
+                borderColor: ChartConstants.Colors.PURPLE,
             });
 
             datasets.push({
-                type: 'line',
-                label: this.translate.instant('General.production'),
+                type: "line",
+                label: this.translate.instant("GENERAL.PRODUCTION"),
                 data: productionArray.map(v => Utils.divideSafely(v, 1000)), // [W] to [kW]
                 hidden: false,
                 order: 1,
             });
             this.colors.push({
-                backgroundColor: 'rgba(45,143,171, 0.2)',
-                borderColor: 'rgba(45,143,171, 1)',
+                backgroundColor: ColorUtils.rgbStringToRgba(ChartConstants.Colors.BLUE, 0.2),
+                borderColor: ChartConstants.Colors.BLUE,
             });
 
             datasets.push({
-                type: 'line',
-                label: this.translate.instant('General.consumption'),
+                type: "line",
+                label: this.translate.instant("GENERAL.CONSUMPTION"),
                 data: consumptionArray.map(v => Utils.divideSafely(v, 1000)), // [W] to [kW]
                 hidden: false,
                 order: 1,
             });
             this.colors.push({
-                backgroundColor: 'rgba(253,197,7,0.2)',
-                borderColor: 'rgba(253,197,7,1)',
+                backgroundColor: ColorUtils.rgbStringToRgba(ChartConstants.Colors.YELLOW, 0.2),
+                borderColor: ChartConstants.Colors.YELLOW,
             });
 
             datasets.push({
-                type: 'line',
-                label: this.translate.instant('General.chargePower'),
+                type: "line",
+                label: this.translate.instant("GENERAL.CHARGE"),
                 data: essChargeArray.map(v => Utils.divideSafely(v, 1000)), // [W] to [kW]
                 hidden: true,
                 order: 1,
-                unit: YAxisTitle.POWER,
+                unit: YAxisType.POWER,
             });
             this.colors.push({
-                backgroundColor: 'rgba(0,223,0, 0.2)',
-                borderColor: 'rgba(0,223,0, 1)',
+                backgroundColor: ColorUtils.rgbStringToRgba(ChartConstants.Colors.GREEN, 0.2),
+                borderColor: ChartConstants.Colors.GREEN,
             });
 
             datasets.push({
-                type: 'line',
-                label: this.translate.instant('General.dischargePower'),
+                type: "line",
+                label: this.translate.instant("GENERAL.DISCHARGE"),
                 data: essDischargeArray.map(v => Utils.divideSafely(v, 1000)), // [W] to [kW]
                 hidden: true,
                 order: 1,
-                unit: YAxisTitle.POWER,
+                unit: YAxisType.POWER,
             });
             this.colors.push({
-                backgroundColor: 'rgba(200,0,0, 0.2)',
-                borderColor: 'rgba(200,0,0, 1)',
+                backgroundColor: ColorUtils.rgbStringToRgba(ChartConstants.Colors.RED, 0.2),
+                borderColor: ChartConstants.Colors.RED,
             });
 
             // State of charge data
             datasets.push({
-                type: 'line',
-                label: this.translate.instant('General.soc'),
+                type: "line",
+                label: this.translate.instant("GENERAL.SOC"),
                 data: socArray,
                 hidden: false,
                 yAxisID: ChartAxis.RIGHT,
                 borderDash: [10, 10],
                 order: 1,
-                unit: YAxisTitle.PERCENTAGE,
+                unit: YAxisType.PERCENTAGE,
             });
             this.colors.push({
-                backgroundColor: 'rgba(189, 195, 199,0.2)',
-                borderColor: 'rgba(189, 195, 199,1)',
+                backgroundColor: "rgba(189, 195, 199,0.2)",
+                borderColor: "rgba(189, 195, 199,1)",
             });
 
             this.datasets = datasets;
@@ -197,28 +204,26 @@ export class SchedulePowerAndSocChartComponent extends AbstractHistoryChart impl
     }
 
     private applyControllerSpecificOptions() {
-        const rightYAxis: HistoryUtils.yAxes = { position: 'right', unit: YAxisTitle.PERCENTAGE, yAxisId: ChartAxis.RIGHT };
-        const leftYAxis: HistoryUtils.yAxes = { position: 'left', unit: YAxisTitle.POWER, yAxisId: ChartAxis.LEFT };
-        const locale = this.service.translate.currentLang;
-
-        this.options = NewAbstractHistoryChart.getYAxisOptions(this.options, rightYAxis, this.translate, 'line', locale, ChartConstants.EMPTY_DATASETS, true);
-        this.options = NewAbstractHistoryChart.getYAxisOptions(this.options, leftYAxis, this.translate, 'line', locale, ChartConstants.EMPTY_DATASETS, true);
-
         this.datasets = this.datasets.map((el: Chart.ChartDataset) => {
-
             // align particular dataset element to right yAxis
-            if (el.label === this.translate.instant('General.soc')) {
-                el['yAxisID'] = ChartAxis.RIGHT;
+            if (el.label === this.translate.instant("GENERAL.SOC")) {
+                el["yAxisID"] = ChartAxis.RIGHT;
             }
             return el;
         });
 
-        this.options.scales.x['ticks'] = { source: 'auto', autoSkip: false };
+        const rightYAxis: HistoryUtils.yAxes = { position: "right", unit: YAxisType.PERCENTAGE, yAxisId: ChartAxis.RIGHT };
+        const leftYAxis: HistoryUtils.yAxes = { position: "left", unit: YAxisType.POWER, yAxisId: ChartAxis.LEFT };
+        this.options = NewAbstractHistoryChart.getYAxisOptions(this.options, rightYAxis, this.translate, "line", this.datasets, true);
+        this.options = NewAbstractHistoryChart.getYAxisOptions(this.options, leftYAxis, this.translate, "line", this.datasets, true);
+
+        this.options.scales.x["ticks"] = { source: "auto", autoSkip: false };
+        this.options.scales.x.ticks.color = getComputedStyle(document.documentElement).getPropertyValue("--ion-color-chart-xAxis-ticks");
         this.options.scales.x.ticks.callback = function (value, index, values) {
             const date = new Date(value);
 
             // Display the label only if the minutes are zero (full hour)
-            return date.getMinutes() === 0 ? date.getHours() + ':00' : '';
+            return date.getMinutes() === 0 ? date.getHours() + ":00" : "";
         };
 
         this.options.scales[ChartAxis.RIGHT].grid.display = false;

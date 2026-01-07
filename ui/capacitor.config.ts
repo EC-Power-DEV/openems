@@ -9,6 +9,9 @@ const baseConfig: CapacitorConfig = {
     androidScheme: 'https',
     iosScheme: 'https',
   },
+  android: {
+    adjustMarginsForEdgeToEdge: 'auto'
+  },
   plugins: {
     SplashScreen: {
       launchShowDuration: 1000,
@@ -22,17 +25,17 @@ const baseConfig: CapacitorConfig = {
       useDialog: true,
     },
     CapacitorCookies: {
-      enabled: true
-    }
-  }
-}
+      enabled: true,
+    },
+  },
+};
 
 switch (process.env.NODE_ENV as Theme) {
   // case 'EXAMPLE':
   //   config = {
   //     ...baseConfig,
   //     appId: 'io.openems.ui',
-  //     appName: 'EXAMPL',
+  //     appName: 'EXAMPLE',
   //     server: {
   //       ...baseConfig.server,
   //       hostname: 'portal.openems.io'
@@ -40,8 +43,7 @@ switch (process.env.NODE_ENV as Theme) {
   //   }
   //   break;
   default:
-    throw new Error(`Capacitor config for theme ${process.env.NODE_ENV} not implemented.`)
-}
-console.warn(config);
+    throw new Error(`Capacitor config for theme ${process.env.NODE_ENV} not implemented.`);
 
+}
 export default config;

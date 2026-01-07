@@ -1,7 +1,7 @@
 // @ts-strict-ignore
 import { registerLocaleData } from "@angular/common";
-import localDE from '@angular/common/locales/de';
-import localeDeExtra from '@angular/common/locales/extra/de';
+import localDE from "@angular/common/locales/de";
+import localeDeExtra from "@angular/common/locales/extra/de";
 import { LOCALE_ID } from "@angular/core";
 import { TestBed } from "@angular/core/testing";
 import { FORMLY_CONFIG } from "@ngx-formly/core";
@@ -11,14 +11,31 @@ import { DummyConfig } from "src/app/shared/components/edge/edgeconfig.spec";
 import { Service, Utils } from "src/app/shared/shared";
 import { Language, MyTranslateLoader } from "src/app/shared/type/language";
 import { Role } from "src/app/shared/type/role";
+import { Theme } from "../history/shared";
 import { registerTranslateExtension } from "./app/app.module";
 import { SettingsComponent } from "./settings.component";
 
-describe('Edge', () => {
-    const serviceSypObject = jasmine.createSpyObj<Service>('Service', ['getCurrentEdge'], {
+describe("Edge", () => {
+    const serviceSypObject = jasmine.createSpyObj<Service>("Service", ["getCurrentEdge"], {
         metadata: new BehaviorSubject({
             edges: null,
-            user: { globalRole: 'admin', hasMultipleEdges: true, id: '', language: Language.DE.key, name: 'test.user', settings: {} },
+            user: {
+                globalRole: "admin", hasMultipleEdges: true, id: "", language: Language.DE.key, name: "test.user", settings: {}, getThemeFromSettings() {
+                    return null;
+                },
+                isAtLeast(role) {
+                    return true;
+                },
+                getNavigationTree(navigation, translate) {
+                    return null;
+                },
+                getUseNewUIFromSettings: function (): boolean {
+                    throw new Error("Function not implemented.");
+                },
+                getAnnualReviewFromSettings() {
+                    return [];
+                },
+            },
         }),
     });
 
@@ -26,7 +43,7 @@ describe('Edge', () => {
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             imports: [
-                TranslateModule.forRoot({ loader: { provide: TranslateLoader, useClass: MyTranslateLoader }, defaultLanguage: Language.DEFAULT.key, useDefaultLang: false }),
+                TranslateModule.forRoot({ loader: { provide: TranslateLoader, useClass: MyTranslateLoader }, fallbackLang: Language.DEFAULT.key }),
             ],
             providers: [
                 TranslateService,
@@ -37,15 +54,15 @@ describe('Edge', () => {
             ],
         }).compileComponents().then(() => {
             const translateService = TestBed.inject(TranslateService);
-            translateService.addLangs(['de']);
-            translateService.use('de');
-            registerLocaleData(localDE, 'de', localeDeExtra);
+            translateService.addLangs(["de"]);
+            translateService.use("de");
+            registerLocaleData(localDE, "de", localeDeExtra);
             settingsComponent = new SettingsComponent(Utils, serviceSypObject, translateService);
         });
 
     });
 
-    it('+ngOnInit - Role.ADMIN', async () => {
+    it("+ngOnInit - Role.ADMIN", async () => {
         const result = await expectNgOnInit(serviceSypObject, Role.ADMIN, settingsComponent);
         expect(result).toEqual({
             isAtLeastOwner: true,
@@ -53,7 +70,7 @@ describe('Edge', () => {
             isAtLeastAdmin: true,
         });
     });
-    it('+ngOnInit - Role.INSTALLER', async () => {
+    it("+ngOnInit - Role.INSTALLER", async () => {
         const result = await expectNgOnInit(serviceSypObject, Role.INSTALLER, settingsComponent);
         expect(result).toEqual({
             isAtLeastOwner: true,
@@ -61,7 +78,7 @@ describe('Edge', () => {
             isAtLeastAdmin: false,
         });
     });
-    it('+ngOnInit - Role.OWNER', async () => {
+    it("+ngOnInit - Role.OWNER", async () => {
         const result = await expectNgOnInit(serviceSypObject, Role.OWNER, settingsComponent);
         expect(result).toEqual({
             isAtLeastOwner: true,
@@ -76,7 +93,24 @@ export async function expectNgOnInit(serviceSypObject: jasmine.SpyObj<Service>, 
     serviceSypObject.getCurrentEdge.and.resolveTo(edge);
     serviceSypObject.metadata.next({
         edges: { [edge.id]: edge },
-        user: { globalRole: 'admin', hasMultipleEdges: true, id: '', language: Language.DE.key, name: 'test.user', settings: {} },
+        user: {
+            globalRole: "admin", hasMultipleEdges: true, id: "", language: Language.DE.key, name: "test.user", settings: {},
+            getThemeFromSettings: function (): Theme | null {
+                throw new Error("Function not implemented.");
+            },
+            isAtLeast(role) {
+                return true;
+            },
+            getNavigationTree(navigation, translate) {
+                return null;
+            },
+            getUseNewUIFromSettings: function (): boolean {
+                throw new Error("Function not implemented.");
+            },
+            getAnnualReviewFromSettings() {
+                return [];
+            },
+        },
     });
     await settingsComponent.ngOnInit();
     return {

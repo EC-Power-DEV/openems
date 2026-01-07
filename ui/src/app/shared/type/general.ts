@@ -4,9 +4,9 @@ export enum GridMode {
     OFF_GRID = 2,
 }
 export enum Mode {
-    MANUAL_ON = 'MANUAL_ON',
-    MANUAL_OFF = 'MANUAL_OFF',
-    AUTOMATIC = 'AUTOMATIC',
+    MANUAL_ON = "MANUAL_ON",
+    MANUAL_OFF = "MANUAL_OFF",
+    AUTOMATIC = "AUTOMATIC",
 }
 export const ChartAnnotationState = {
     ON: 1,
@@ -14,6 +14,18 @@ export const ChartAnnotationState = {
     OFF_HIDDEN: null,
 };
 export enum WorkMode {
-    TIME = 'TIME',
-    NONE = 'NONE',
+    TIME = "TIME",
+    NONE = "NONE",
+    ENERGY = "ENERGY",
+    TEMPERATURE = "TEMPERATURE",
+}
+export enum EnabledDisabledState {
+    DISABLED = 0,
+    ENABLED = 1,
+}
+export enum OverrideStatus {
+    ACTIVE = 0,
+    INACTIVE = 1,
+    ERROR = 2,
+    DONE = 3,
 }

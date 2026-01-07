@@ -10,6 +10,11 @@ import io.openems.common.utils.JsonUtils;
 public enum OpenemsAppCategory {
 
 	/**
+	 * Core.
+	 */
+	CORE("core"),
+
+	/**
 	 * Integrated Systems.
 	 */
 	INTEGRATED_SYSTEM("integratedSystems"),
@@ -23,6 +28,16 @@ public enum OpenemsAppCategory {
 	 * Electric vehicle charging station.
 	 */
 	EVCS("evcs"),
+
+	/**
+	 * Read only Electric vehicle charging station.
+	 */
+	EVCS_READ_ONLY("evcsReadOnly"),
+
+	/**
+	 * Electric vehicle.
+	 */
+	ELECTRIC_VEHCILE("electricVehicle"),
 
 	/**
 	 * Heat.
@@ -45,6 +60,11 @@ public enum OpenemsAppCategory {
 	HARDWARE("hardware"),
 
 	/**
+	 * The hardware on which the OpenEMS software runs.
+	 */
+	OPENEMS_DEVICE_HARDWARE("openemsDeviceHardware"),
+
+	/**
 	 * Peak-Shaving.
 	 */
 	PEAK_SHAVING("peakShaving"), //
@@ -65,16 +85,26 @@ public enum OpenemsAppCategory {
 	METER("meter"),
 
 	/**
+	 * Grid meter.
+	 */
+	GRID_METER("gridMeter"),
+
+	/**
 	 * Apis.
 	 */
 	API("api"),
+
+	/**
+	 * Prediction.
+	 */
+	PREDICTION("prediction"),
 
 	/**
 	 * Timedata..
 	 *
 	 */
 	TIMEDATA("timedata"),
-	
+
 	/**
 	 * Category for test apps.
 	 *

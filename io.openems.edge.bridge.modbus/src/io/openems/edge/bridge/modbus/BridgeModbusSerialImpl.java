@@ -24,10 +24,12 @@ import io.openems.common.exceptions.OpenemsException;
 import io.openems.edge.bridge.modbus.api.AbstractModbusBridge;
 import io.openems.edge.bridge.modbus.api.BridgeModbus;
 import io.openems.edge.bridge.modbus.api.BridgeModbusSerial;
+import io.openems.edge.bridge.modbus.api.Config;
 import io.openems.edge.bridge.modbus.api.Parity;
 import io.openems.edge.bridge.modbus.api.Stopbit;
 import io.openems.edge.common.component.OpenemsComponent;
 import io.openems.edge.common.event.EdgeEventConstants;
+import io.openems.edge.common.startstop.StartStoppable;
 
 /**
  * Provides a service for connecting to, querying and writing to a Modbus/RTU
@@ -44,7 +46,7 @@ import io.openems.edge.common.event.EdgeEventConstants;
 		EdgeEventConstants.TOPIC_CYCLE_EXECUTE_WRITE //
 })
 public class BridgeModbusSerialImpl extends AbstractModbusBridge
-		implements BridgeModbus, BridgeModbusSerial, OpenemsComponent, EventHandler {
+		implements BridgeModbus, BridgeModbusSerial, OpenemsComponent, EventHandler, StartStoppable {
 
 	/** The configured Port-Name (e.g. '/dev/ttyUSB0' or 'COM3'). */
 	private String portName = "";
@@ -61,40 +63,26 @@ public class BridgeModbusSerialImpl extends AbstractModbusBridge
 	/** The configured parity. */
 	private Parity parity;
 
-	/** Enable internal bus termination. */
-	private boolean enableTermination;
-
-	/**
-	 * The configured delay between activating the transmitter and actually sending
-	 * data in microseconds.
-	 */
-	private int delayBeforeTx;
-
-	/**
-	 * The configured delay between the end of transmitting data and deactivating
-	 * transmitter in microseconds.
-	 */
-	private int delayAfterTx;
-
 	public BridgeModbusSerialImpl() {
 		super(//
 				OpenemsComponent.ChannelId.values(), //
 				BridgeModbus.ChannelId.values(), //
-				BridgeModbusSerial.ChannelId.values() //
+				BridgeModbusSerial.ChannelId.values(), //
+				StartStoppable.ChannelId.values() //
 		);
 	}
 
 	@Activate
 	private void activate(ComponentContext context, ConfigSerial config) {
-		super.activate(context, config.id(), config.alias(), config.enabled(), config.logVerbosity(),
-				config.invalidateElementsAfterReadErrors());
+		super.activate(context, new Config(config.id(), config.alias(), config.enabled(), config.logVerbosity(),
+				config.invalidateElementsAfterReadErrors()));
 		this.applyConfig(config);
 	}
 
 	@Modified
 	private void modified(ComponentContext context, ConfigSerial config) {
-		super.modified(context, config.id(), config.alias(), config.enabled(), config.logVerbosity(),
-				config.invalidateElementsAfterReadErrors());
+		super.modified(context, new Config(config.id(), config.alias(), config.enabled(), config.logVerbosity(),
+				config.invalidateElementsAfterReadErrors()));
 		this.applyConfig(config);
 		this.closeModbusConnection();
 	}
@@ -105,9 +93,6 @@ public class BridgeModbusSerialImpl extends AbstractModbusBridge
 		this.databits = config.databits();
 		this.stopbits = config.stopbits();
 		this.parity = config.parity();
-		this.enableTermination = config.enableTermination();
-		this.delayBeforeTx = config.delayBeforeTx();
-		this.delayAfterTx = config.delayAfterTx();
 	}
 
 	@Override
@@ -126,6 +111,11 @@ public class BridgeModbusSerialImpl extends AbstractModbusBridge
 
 	@Override
 	public ModbusTransaction getNewModbusTransaction() throws OpenemsException {
+		if (this.isStopped()) {
+			this.closeModbusConnection();
+			return null;
+		}
+
 		var connection = this.getModbusConnection();
 		var transaction = new ModbusSerialTransaction(connection);
 		transaction.setRetries(AbstractModbusBridge.DEFAULT_RETRIES);
@@ -147,13 +137,7 @@ public class BridgeModbusSerialImpl extends AbstractModbusBridge
 			params.setParity(this.parity.getValue());
 			params.setEncoding(Modbus.SERIAL_ENCODING_RTU);
 			params.setEcho(false);
-			/* RS485 Settings */
-			params.setRs485Mode(true);
-			params.setRs485RxDuringTx(false);
-			params.setRs485TxEnableActiveHigh(true);
-			params.setRs485EnableTermination(this.enableTermination);
-			params.setRs485DelayBeforeTxMicroseconds(this.delayBeforeTx);
-			params.setRs485DelayAfterTxMicroseconds(this.delayAfterTx);
+			params.disableRs485Control();
 			var connection = new SerialConnection(params);
 			this._connection = connection;
 		}

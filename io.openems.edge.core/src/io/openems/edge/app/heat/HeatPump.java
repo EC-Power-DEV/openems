@@ -121,7 +121,8 @@ public class HeatPump extends AbstractOpenemsAppWithProps<HeatPump, Property, He
 				return new HeatPumpParameter(//
 						createResourceBundle(t.language), //
 						createPhaseInformation(t.app.componentUtil, 2, //
-								List.of(RelayProps.feneconHomeFilter(t.language, isHomeInstalled, false)), //
+								List.of(RelayProps.feneconHomeFilter(t.language, isHomeInstalled, false),
+										RelayProps.gpioFilter(), RelayProps.shellyFilter()), //
 								List.of(RelayProps.feneconHome2030PreferredRelays(isHomeInstalled, new int[] { 5, 6 }), //
 										PreferredRelay.of(4, new int[] { 2, 3 }), //
 										PreferredRelay.of(8, new int[] { 2, 3 }))) //
@@ -205,7 +206,8 @@ public class HeatPump extends AbstractOpenemsAppWithProps<HeatPump, Property, He
 	@Override
 	public ValidatorConfig.Builder getValidateBuilder() {
 		return ValidatorConfig.create() //
-				.setInstallableCheckableConfigs(checkRelayCount(2, CheckRelayCountFilters.feneconHome(false)));
+				.setInstallableCheckableConfigs(checkRelayCount(2, CheckRelayCountFilters.feneconHome(false),
+						CheckRelayCountFilters.deviceHardware()));
 	}
 
 	@Override
@@ -224,7 +226,7 @@ public class HeatPump extends AbstractOpenemsAppWithProps<HeatPump, Property, He
 	}
 
 	private static <P extends BundleProvider & RelayContactInformationProvider> //
-	AppDef<OpenemsApp, Nameable, P> heatPumpRelayContactDef(int contactPosition) {
+			AppDef<OpenemsApp, Nameable, P> heatPumpRelayContactDef(int contactPosition) {
 		return AppDef.copyOfGeneric(relayContactDef(contactPosition, //
 				Nameable.of("OUTPUT_CHANNEL_1"), Nameable.of("OUTPUT_CHANNEL_2")),
 				b -> b.setTranslatedLabelWithAppPrefix(".outputChannel" + contactPosition + ".label") //

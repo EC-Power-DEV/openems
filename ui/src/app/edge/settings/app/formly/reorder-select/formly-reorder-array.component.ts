@@ -4,8 +4,9 @@ import { ItemReorderEventDetail } from "@ionic/angular";
 import { FieldType, FieldTypeConfig, FormlyFieldConfig, FormlyFieldProps } from "@ngx-formly/core";
 
 @Component({
-    selector: 'reorder-array',
-    templateUrl: './formly-reorder-array.component.html',
+    selector: "reorder-array",
+    templateUrl: "./formly-reorder-array.component.html",
+    standalone: false,
 })
 export class FormlyReorderArrayComponent extends FieldType<FieldTypeConfig<FormlyFieldProps & {
     allowDuplicates?: boolean,

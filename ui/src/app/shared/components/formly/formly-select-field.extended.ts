@@ -4,8 +4,9 @@ import { FieldWrapper } from "@ngx-formly/core";
 import { FormlySelectFieldModalComponent } from "./formly-select-field-modal.component";
 
 @Component({
-    selector: 'formly-select-extended-wrapper',
-    templateUrl: './formly-select-field.extended.html',
+    selector: "formly-select-extended-wrapper",
+    templateUrl: "./formly-select-field.extended.html",
+    standalone: false,
 })
 export class FormlySelectFieldExtendedWrapperComponent extends FieldWrapper {
 
@@ -33,7 +34,7 @@ export class FormlySelectFieldExtendedWrapperComponent extends FieldWrapper {
                 options: this.props.options,
                 initialSelectedValue: this.formControl.value,
             },
-            cssClass: ['auto-height', 'full-width'],
+            cssClass: ["auto-height", "full-width"],
         });
         modal.onDidDismiss().then(event => {
             if (!event.data) {

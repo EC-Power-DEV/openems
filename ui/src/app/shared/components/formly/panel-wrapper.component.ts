@@ -2,7 +2,7 @@ import { Component } from "@angular/core";
 import { FieldWrapper } from "@ngx-formly/core";
 
 @Component({
-    selector: 'formly-wrapper-panel',
+    selector: "formly-wrapper-panel",
     template: `
     <ion-item lines="none" class="ion-no-padding">
         <ion-grid>
@@ -15,6 +15,7 @@ import { FieldWrapper } from "@ngx-formly/core";
         </ion-grid>
     </ion-item>
     `,
+    standalone: false,
 })
 export class PanelWrapperComponent extends FieldWrapper {
 }

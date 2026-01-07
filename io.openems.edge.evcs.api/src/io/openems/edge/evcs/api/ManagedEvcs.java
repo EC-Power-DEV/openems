@@ -130,7 +130,7 @@ public interface ManagedEvcs extends Evcs {
 	public boolean pauseChargeProcess() throws Exception;
 
 	/**
-	 * Command to send the specified text to the EVCS display, if supported
+	 * Command to send the specified text to the EVCS display, if supported.
 	 * 
 	 * <p>
 	 * Writes to the display of the charging station, if the EVCS supports that
@@ -176,7 +176,6 @@ public interface ManagedEvcs extends Evcs {
 		 * <li>Hardy Barth allows setting in Ampere. It should return 230 W (1A * 230V).
 		 * </ul>
 		 *
-		 * <p>
 		 * <ul>
 		 * <li>Interface: ManagedEvcs
 		 * <li>Writable
@@ -264,8 +263,8 @@ public interface ManagedEvcs extends Evcs {
 
 						evcs.setChargePowerLimit(filterOutput);
 
-						if (evcs instanceof ManagedEvcs) {
-							((ManagedEvcs) evcs).logDebug("Filter: " + value + " -> " + filterOutput);
+						if (evcs instanceof ManagedEvcs me) {
+							me.logDebug("Filter: " + value + " -> " + filterOutput);
 						}
 					}
 				})), //

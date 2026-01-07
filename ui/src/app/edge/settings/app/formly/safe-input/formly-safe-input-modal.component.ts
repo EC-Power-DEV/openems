@@ -5,8 +5,9 @@ import { ModalController } from "@ionic/angular";
 import { FormlyFieldConfig } from "@ngx-formly/core";
 
 @Component({
-    selector: 'formly-safe-input-modal',
-    templateUrl: './formly-safe-input-modal.component.html',
+    selector: "formly-safe-input-modal",
+    templateUrl: "./formly-safe-input-modal.component.html",
+    standalone: false,
 })
 export class FormlySafeInputModalComponent implements OnInit {
 

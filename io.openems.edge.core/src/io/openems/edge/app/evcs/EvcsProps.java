@@ -1,5 +1,6 @@
 package io.openems.edge.app.evcs;
 
+import static io.openems.edge.app.common.props.CommonProps.defaultDef;
 import static io.openems.edge.core.appmanager.formly.enums.InputType.NUMBER;
 
 import java.util.List;
@@ -12,28 +13,48 @@ import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
 import io.openems.common.session.Language;
 import io.openems.common.utils.JsonUtils;
 import io.openems.edge.app.common.props.CommonProps;
+import io.openems.edge.app.enums.EMobilityArchitectureType;
+import io.openems.edge.app.enums.KebaHardwareType;
+import io.openems.edge.app.enums.OptionsFactory;
 import io.openems.edge.common.component.ComponentManager;
 import io.openems.edge.common.component.OpenemsComponent;
 import io.openems.edge.core.appmanager.AppDef;
 import io.openems.edge.core.appmanager.AppManager;
 import io.openems.edge.core.appmanager.AppManagerImpl;
+import io.openems.edge.core.appmanager.AppManagerUtilSupplier;
 import io.openems.edge.core.appmanager.ComponentManagerSupplier;
 import io.openems.edge.core.appmanager.ComponentUtil;
 import io.openems.edge.core.appmanager.ComponentUtilSupplier;
+import io.openems.edge.core.appmanager.MetaSupplier;
 import io.openems.edge.core.appmanager.Nameable;
 import io.openems.edge.core.appmanager.OpenemsApp;
+import io.openems.edge.core.appmanager.OpenemsAppCategory;
 import io.openems.edge.core.appmanager.TranslationUtil;
 import io.openems.edge.core.appmanager.Type.Parameter.BundleProvider;
 import io.openems.edge.core.appmanager.formly.Exp;
 import io.openems.edge.core.appmanager.formly.JsonFormlyUtil;
 import io.openems.edge.core.appmanager.formly.builder.FieldGroupBuilder;
 import io.openems.edge.core.appmanager.formly.enums.DisplayType;
+import io.openems.edge.meter.api.PhaseRotation;
 
 public final class EvcsProps {
 
 	public static final int NUMBER_OF_PHASES = 3;
 
 	private EvcsProps() {
+	}
+
+	/**
+	 * Creates a {@link AppDef} for configuring the reaad only of a evcs app.
+	 * 
+	 * @return the {@link AppDef}
+	 */
+	public static AppDef<OpenemsApp, Nameable, BundleProvider> readOnly() {
+		return AppDef.copyOfGeneric(defaultDef())//
+				.setTranslatedLabel("App.Evcs.readOnly.label") //
+				.setTranslatedDescription("App.Evcs.readOnly.description") //
+				.setField(JsonFormlyUtil::buildCheckboxFromNameable) //
+				.setDefaultValue(false);
 	}
 
 	/**
@@ -45,7 +66,7 @@ public final class EvcsProps {
 	public static AppDef<OpenemsApp, Nameable, BundleProvider> numberOfChargePoints(//
 			final int maxValue //
 	) {
-		return AppDef.copyOfGeneric(CommonProps.defaultDef(), def -> def //
+		return AppDef.copyOfGeneric(defaultDef(), def -> def //
 				.setTranslatedLabel("App.Evcs.numberOfChargingStations.label") //
 				.setDefaultValue(1) //
 				.setField(JsonFormlyUtil::buildSelectFromNameable, (app, property, l, parameter, field) -> //
@@ -54,14 +75,16 @@ public final class EvcsProps {
 						.toList(), JsonPrimitive::new, JsonPrimitive::new)));
 	}
 
-	private static void field(//
-			OpenemsApp app, //
+	private static <T extends OpenemsApp & MetaSupplier> void field(//
+			T app, //
 			Nameable property, //
 			Nameable acceptProperty, //
 			Language language, //
 			BundleProvider parameter, //
 			FieldGroupBuilder field //
 	) {
+		final var gridConnectionPointFuseLimit = app.getMeta().getGridConnectionPointFuseLimit();
+
 		field.hideKey();
 		field.setPopupInput(property, DisplayType.NUMBER);
 		field.setFieldGroup(JsonUtils.buildJsonArray() //
@@ -73,22 +96,18 @@ public final class EvcsProps {
 						.setText(TranslationUtil.getTranslation(parameter.bundle(), //
 								"App.Evcs.Cluster.maxGrid.text2"))
 						.build())
+				.add(JsonFormlyUtil.buildText() //
+						.setText(TranslationUtil.getTranslation(parameter.bundle(), //
+								"App.Evcs.Cluster.maxGrid.text3"))
+						.build())
 				.add(JsonFormlyUtil.buildInputFromNameable(property) //
 						.setLabel(TranslationUtil.getTranslation(parameter.bundle(),
 								"App.Evcs.Cluster.maxChargeFromGrid.short.label"))
 						.setInputType(NUMBER) //
 						.setMin(0) //
-						.isRequired(true) //
+						.setMax(gridConnectionPointFuseLimit * 230 * 3).isRequired(true) //
+						.setDefaultValue(Math.round(gridConnectionPointFuseLimit * 0.9F) * 230 * 3)//
 						.setUnit(Unit.WATT, language) //
-						.build())
-				.add(JsonFormlyUtil.buildText() //
-						.setText(TranslationUtil.getTranslation(parameter.bundle(), //
-								"App.Evcs.Cluster.maxGrid.text3"))
-						.build())
-				.add(JsonFormlyUtil.buildCheckboxFromNameable(acceptProperty) //
-						.isRequired(true) //
-						.requireTrue(language) //
-						.setLabel(TranslationUtil.getTranslation(parameter.bundle(), "acceptCondition.label")) //
 						.build())
 				.build());
 	}
@@ -101,9 +120,9 @@ public final class EvcsProps {
 	 * @param acceptProperty the property of the accept field
 	 * @return the {@link AppDef}
 	 */
-	public static <T extends OpenemsApp & ComponentManagerSupplier> AppDef<T, Nameable, BundleProvider> clusterMaxHardwarePower(
+	public static <T extends OpenemsApp & ComponentManagerSupplier & MetaSupplier> AppDef<T, Nameable, BundleProvider> clusterMaxHardwarePower(
 			Nameable acceptProperty) {
-		return AppDef.copyOfGeneric(CommonProps.defaultDef(), def -> def //
+		return AppDef.copyOfGeneric(defaultDef(), def -> def //
 				.setTranslatedLabel("App.Evcs.Cluster.maxChargeFromGrid.label") //
 				.setAllowedToSave(false) //
 				.setIsAllowedToSee((app, property, l, parameter, user) -> {
@@ -113,6 +132,7 @@ public final class EvcsProps {
 					}
 					return true;
 				}) //
+				.setRequired(true) //
 				.setField(JsonFormlyUtil::buildFieldGroupFromNameable, (app, property, l, parameter,
 						field) -> field(app, property, acceptProperty, l, parameter, field)));
 	}
@@ -127,7 +147,7 @@ public final class EvcsProps {
 	 * @param evcsIdProperty the property of the evcs id
 	 * @return the {@link AppDef}
 	 */
-	public static <T extends OpenemsApp & ComponentManagerSupplier & ComponentUtilSupplier> AppDef<T, Nameable, BundleProvider> clusterMaxHardwarePowerSingleCp(
+	public static <T extends OpenemsApp & ComponentManagerSupplier & ComponentUtilSupplier & MetaSupplier> AppDef<T, Nameable, BundleProvider> clusterMaxHardwarePowerSingleCp(
 			Nameable acceptProperty, //
 			Nameable evcsIdProperty //
 	) {
@@ -182,4 +202,76 @@ public final class EvcsProps {
 		return false;
 	}
 
+	/**
+	 * Creates a {@link AppDef} for a {@link PhaseRotation}.
+	 *
+	 * @return the {@link AppDef}
+	 */
+	public static final AppDef<OpenemsApp, Nameable, BundleProvider> phaseRotation() {
+		return AppDef.copyOfGeneric(
+				CommonProps.phaseRotation().setTranslatedDescription("App.Evcs.phaseRotation.description")); //
+	}
+
+	/**
+	 * Creates a {@link AppDef} for a {@link KebaHardwareType}.
+	 * 
+	 * @param evcsId {@link Nameable} of evcs id
+	 * @return the {@link AppDef}
+	 */
+	public static final AppDef<OpenemsApp, Nameable, BundleProvider> hardwareType(Nameable evcsId) {
+		return AppDef.copyOfGeneric(defaultDef())//
+				.setTranslatedLabel("App.Evcs.Keba.hardwareType.label")
+				.setField(JsonFormlyUtil::buildSelectFromNameable, (app, property, l, parameter, field) -> {
+					field.setOptions(OptionsFactory.of(KebaHardwareType.class), l);
+				})//
+				.wrapField((app, property, l, parameter, field) -> {
+					field.readonlyIf(Exp.currentModelValue(evcsId).notNull());
+				})//
+				.setRequired(true) //
+				.setDefaultValue(KebaHardwareType.P30);
+	}
+
+	/**
+	 * Creates a {@link AppDef} for a {@link EMobilityArchitectureType}.
+	 * 
+	 * @param evcsId {@link Nameable} of evcs id
+	 * @param <T>    type of app
+	 * @return the {@link AppDef}
+	 */
+	public static <T extends OpenemsApp & AppManagerUtilSupplier> AppDef<T, Nameable, BundleProvider> architectureType(
+			Nameable evcsId) {
+		return AppDef.copyOfGeneric(defaultDef(), def -> def//
+				.setTranslatedLabel("App.Evcs.Keba.architectureType.label")//
+				.setField(JsonFormlyUtil::buildSelectFromNameable, (app, property, l, parameter, field) -> {
+					var appManagerUtil = app.getAppManagerUtil();
+					var apps = appManagerUtil.getInstantiatedAppsByCategories(OpenemsAppCategory.EVCS);
+					var value = apps.stream().filter(t -> {
+						return t.properties.has("ARCHITECTURE_TYPE");
+					}).map(t -> {
+						return t.properties.get("ARCHITECTURE_TYPE");
+					}).map(t -> t.getAsString()).findFirst().orElse(null);
+
+					EMobilityArchitectureType excluded = null;
+
+					if (value != null) {
+						excluded = switch (value) {
+						case "EVCS" -> EMobilityArchitectureType.EVSE;
+						case "EVSE" -> EMobilityArchitectureType.EVCS;
+						default -> null;
+						};
+					}
+
+					if (excluded != null) {
+						field.setOptions(OptionsFactory.of(EMobilityArchitectureType.class, excluded), l);
+					} else {
+						field.setOptions(OptionsFactory.of(EMobilityArchitectureType.class), l);
+					}
+
+				})//
+				.wrapField((app, property, l, parameter, field) -> {
+					field.readonlyIf(Exp.currentModelValue(evcsId).notNull());
+				})//
+				.setRequired(true)//
+				.setDefaultValue(EMobilityArchitectureType.EVCS));
+	}
 }

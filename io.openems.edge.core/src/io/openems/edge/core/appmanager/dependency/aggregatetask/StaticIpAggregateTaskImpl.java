@@ -2,6 +2,8 @@ package io.openems.edge.core.appmanager.dependency.aggregatetask;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.osgi.service.component.annotations.Activate;
@@ -9,12 +11,17 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ServiceScope;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
+
 import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
 import io.openems.common.session.Language;
+import io.openems.common.utils.JsonUtils;
 import io.openems.edge.common.user.User;
 import io.openems.edge.core.appmanager.AppConfiguration;
 import io.openems.edge.core.appmanager.ComponentUtil;
 import io.openems.edge.core.appmanager.InterfaceConfiguration;
+import io.openems.edge.core.appmanager.OpenemsAppInstance;
 import io.openems.edge.core.appmanager.TranslationUtil;
 import io.openems.edge.core.appmanager.dependency.AppManagerAppHelperImpl;
 
@@ -27,6 +34,40 @@ import io.openems.edge.core.appmanager.dependency.AppManagerAppHelperImpl;
 		scope = ServiceScope.SINGLETON //
 )
 public class StaticIpAggregateTaskImpl implements StaticIpAggregateTask {
+
+	private record StaticIpExecutionConfiguration(//
+			List<InterfaceConfiguration> ips //
+	) implements AggregateTask.AggregateTaskExecutionConfiguration {
+
+		private StaticIpExecutionConfiguration {
+			Objects.requireNonNull(ips);
+		}
+
+		@Override
+		public String identifier() {
+			return "StaticIp";
+		}
+
+		@Override
+		public JsonElement toJson() {
+			if (this.ips.isEmpty()) {
+				return JsonNull.INSTANCE;
+			}
+			return JsonUtils.buildJsonObject() //
+					.add("interfaces", this.ips.stream() //
+							.map(t -> JsonUtils.buildJsonObject() //
+									.addProperty("interface", t.interfaceName) //
+									.add("addresses", t.getIps().stream() //
+											.map(ip -> JsonUtils.buildJsonObject() //
+													.addProperty("address", ip.getInet4Address().getHostAddress()) //
+													.build()) //
+											.collect(JsonUtils.toJsonArray())) //
+									.build())
+							.collect(JsonUtils.toJsonArray()))
+					.build();
+		}
+
+	}
 
 	private final boolean isWindows = System.getProperty("os.name").startsWith("Windows");
 
@@ -69,6 +110,11 @@ public class StaticIpAggregateTaskImpl implements StaticIpAggregateTask {
 		this.execute(user, otherAppConfigurations, null, this.ips2Delete);
 	}
 
+	@Override
+	public AggregateTaskExecutionConfiguration getExecutionConfiguration() {
+		return new StaticIpExecutionConfiguration(this.ips);
+	}
+
 	private void execute(//
 			final User user, //
 			final List<AppConfiguration> otherAppConfigurations, //
@@ -96,7 +142,12 @@ public class StaticIpAggregateTaskImpl implements StaticIpAggregateTask {
 	}
 
 	@Override
-	public void validate(List<String> errors, AppConfiguration appConfiguration, StaticIpConfiguration config) {
+	public void validate(//
+			final List<String> errors, //
+			final AppConfiguration appConfiguration, //
+			final StaticIpConfiguration config, //
+			final Map<OpenemsAppInstance, AppConfiguration> allConfigurations //
+	) {
 		// setting ip configuration is not implemented for windows
 		if (this.isWindows) {
 			return;
@@ -116,6 +167,18 @@ public class StaticIpAggregateTaskImpl implements StaticIpAggregateTask {
 						if (existingInterface == null) {
 							errors.add("Interface '" + i.interfaceName + "' not found.");
 							return;
+						}
+
+						if (i.getIpMasquerade() != null
+								&& !i.getIpMasquerade().equals(existingInterface.getIpMasquerade().getValue())) {
+							errors.add("Property 'IPMasquerade' on interface '" + i.interfaceName + "' should be '"
+									+ i.getIpMasquerade() + "'");
+						}
+
+						if (i.getIpv4Forwarding() != null
+								&& !i.getIpv4Forwarding().equals(existingInterface.getIpv4Forwarding().getValue())) {
+							errors.add("Property 'IPv4Forwarding' on interface '" + i.interfaceName + "' should be '"
+									+ i.getIpv4Forwarding() + "'");
 						}
 
 						var missingIps = i.getIps().stream() //
